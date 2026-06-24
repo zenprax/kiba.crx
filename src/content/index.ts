@@ -19,6 +19,7 @@ import {
 import { detectTenant, isTrustedTenant } from '../lib/tenantDetector';
 import { addAuditLog, getSettings, onSettingsChanged, setSettings } from '../lib/storage';
 import { DEFAULT_SETTINGS, WHITELISTED_DOMAINS, type KibaSettings } from '../types';
+import { initSsoHandler } from './ssoHandler';
 
 const HOSTNAME = window.location.hostname;
 
@@ -30,6 +31,9 @@ let settings: KibaSettings | null = null;
 
 void getSettings().then((s) => {
   settings = s;
+  // Feature B: attempt pseudo-SSO autofill once settings (and thus the SSO
+  // toggle + credentials) are available.
+  initSsoHandler(() => settings);
 });
 onSettingsChanged((s) => {
   settings = s;
