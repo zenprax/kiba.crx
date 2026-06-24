@@ -5,6 +5,8 @@ risks at the edge (the browser) before they turn into encrypted network traffic.
 
 This is the **MVP (Phase 1)** scaffold built per [`kiba_crx_spec.md`](./kiba_crx_spec.md).
 
+> 日本語版 README はこちら: [README.ja.md](./README.ja.md)
+
 ## Features
 
 | # | Feature | Implementation |
@@ -81,4 +83,4 @@ npm test         # Run Vitest unit tests
 
 ## License
 
-MIT — see [LICENSE](./LICENSE).
+Apache 2.0 — see [LICENSE](./LICENSE).
