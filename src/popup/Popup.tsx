@@ -193,12 +193,18 @@ const EVENT_LABEL: Record<AuditEventType, string> = {
   'paste-block': 'PASTE',
   'file-block': 'FILE',
   'bypass-grant': 'BYPASS',
+  'paste-mask': 'MASK',
+  'sso-fill': 'SSO',
+  'tenant-block': 'TENANT',
 };
 
 const EVENT_COLOR: Record<AuditEventType, string> = {
   'paste-block': 'text-rose-300 bg-rose-500/10',
   'file-block': 'text-amber-300 bg-amber-500/10',
   'bypass-grant': 'text-emerald-300 bg-emerald-500/10',
+  'paste-mask': 'text-amber-300 bg-amber-500/10',
+  'sso-fill': 'text-sky-300 bg-sky-500/10',
+  'tenant-block': 'text-rose-300 bg-rose-500/10',
 };
 
 function AuditLogList({ entries }: { entries: AuditLogEntry[] }) {
