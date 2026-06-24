@@ -11,8 +11,9 @@
  */
 
 import { describePasteThreat, isDangerousPaste } from '../lib/patterns';
+import { detectTenant, isTrustedTenant } from '../lib/tenantDetector';
 import { addAuditLog, getSettings, onSettingsChanged, setSettings } from '../lib/storage';
-import { WHITELISTED_DOMAINS, type KibaSettings } from '../types';
+import { DEFAULT_SETTINGS, WHITELISTED_DOMAINS, type KibaSettings } from '../types';
 
 const HOSTNAME = window.location.hostname;
 
@@ -33,6 +34,27 @@ function isWhitelistedDomain(host: string): boolean {
   return WHITELISTED_DOMAINS.some(
     (domain) => host === domain || host.endsWith(`.${domain}`),
   );
+}
+
+/**
+ * Decides whether the current page is a *restricted context* — i.e. a foreign
+ * ("他社") tenant on a known SaaS, or (for unknown providers) a host that is not
+ * on the domain whitelist.
+ *
+ * Tenant identification (Feature A) takes precedence: on a known provider we
+ * trust only whitelisted tenant ids. When the provider is 'unknown' we fall
+ * back to the legacy host-based domain whitelist so behaviour is unchanged for
+ * non-SaaS sites.
+ */
+function isRestrictedContext(): boolean {
+  const ctx = detectTenant(window.location.href);
+  const whitelist = settings?.tenantWhitelist ?? DEFAULT_SETTINGS.tenantWhitelist;
+
+  if (ctx.provider === 'unknown') {
+    // No tenant signal: defer to host-based whitelisting.
+    return !isWhitelistedDomain(HOSTNAME);
+  }
+  return !isTrustedTenant(ctx, whitelist);
 }
 
 function notify(title: string, message: string): void {
@@ -165,7 +187,7 @@ document.addEventListener(
  * handles the block/bypass workflow. Returns true if the upload was blocked.
  */
 async function handleUploadAttempt(reset: () => void): Promise<boolean> {
-  if (isWhitelistedDomain(HOSTNAME)) return false;
+  if (!isRestrictedContext()) return false;
 
   const current = await getSettings();
   if (current.oneTimeBypassActive) {
@@ -207,14 +229,14 @@ document.addEventListener(
 );
 
 // Intercept drag-and-drop file transfers onto the page.
-// Drop is not awaitable, so on non-whitelisted domains we block eagerly and
+// Drop is not awaitable, so in a restricted context we block eagerly and
 // resolve the (single-use) bypass token afterwards.
 document.addEventListener(
   'drop',
   (event: DragEvent) => {
     const hasFiles = (event.dataTransfer?.files?.length ?? 0) > 0;
     if (!hasFiles) return;
-    if (isWhitelistedDomain(HOSTNAME)) return;
+    if (!isRestrictedContext()) return;
 
     event.preventDefault();
     event.stopPropagation();
