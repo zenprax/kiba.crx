@@ -4,6 +4,8 @@ import {
   type AuditEventType,
   type AuditLogEntry,
   type KibaSettings,
+  type SsoCredential,
+  type TenantWhitelistEntry,
 } from '../types';
 import { getSettings, onSettingsChanged, setSettings } from '../lib/storage';
 
@@ -21,12 +23,23 @@ export function Popup() {
   }, []);
 
   const blockedCount = useMemo(
-    () => settings.auditLog.filter((e) => e.type !== 'bypass-grant').length,
+    () =>
+      settings.auditLog.filter((e) => e.type !== 'bypass-grant' && e.type !== 'sso-fill').length,
     [settings.auditLog],
   );
 
   async function toggleAntiClickFix() {
     const next = await setSettings({ antiClickFixEnabled: !settings.antiClickFixEnabled });
+    setLocalSettings(next);
+  }
+
+  async function toggleMask() {
+    const next = await setSettings({ maskEnabled: !settings.maskEnabled });
+    setLocalSettings(next);
+  }
+
+  async function toggleSso() {
+    const next = await setSettings({ ssoEnabled: !settings.ssoEnabled });
     setLocalSettings(next);
   }
 
@@ -79,6 +92,44 @@ export function Popup() {
               onChange={toggleAntiClickFix}
             />
           </div>
+        </Card>
+
+        {/* Paste masking toggle */}
+        <Card>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-semibold">Confidential Masking</div>
+              <div className="text-xs text-emerald-200/60">
+                Mask secrets on foreign-tenant pastes
+              </div>
+            </div>
+            <Toggle checked={settings.maskEnabled} disabled={loading} onChange={toggleMask} />
+          </div>
+        </Card>
+
+        {/* Pseudo-SSO toggle + credential mock list */}
+        <Card>
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm font-semibold">Pseudo-SSO Autofill</div>
+              <div className="text-xs text-emerald-200/60">
+                Hidden autofill for shared accounts
+              </div>
+            </div>
+            <Toggle checked={settings.ssoEnabled} disabled={loading} onChange={toggleSso} />
+          </div>
+          <CredentialList creds={settings.ssoCredentials} />
+        </Card>
+
+        {/* Trusted tenant whitelist (read-only) */}
+        <Card>
+          <div className="flex items-center justify-between">
+            <div className="text-sm font-semibold">Trusted Tenants</div>
+            <span className="text-[11px] text-emerald-200/50">
+              {settings.tenantWhitelist.length} entries
+            </span>
+          </div>
+          <TenantList entries={settings.tenantWhitelist} />
         </Card>
 
         {/* File control simulator */}
@@ -233,6 +284,67 @@ function AuditLogList({ entries }: { entries: AuditLogEntry[] }) {
               {formatTime(e.ts)} · {e.domain || 'unknown'}
             </div>
           </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function CredentialList({ creds }: { creds: SsoCredential[] }) {
+  if (creds.length === 0) {
+    return (
+      <div className="mt-3 rounded-lg border border-dashed border-emerald-500/15 py-3 text-center text-[11px] text-emerald-200/40">
+        No shared credentials configured.
+      </div>
+    );
+  }
+  return (
+    <ul className="mt-3 space-y-1.5">
+      {creds.map((c) => (
+        <li
+          key={c.urlMatch}
+          className="flex items-center justify-between rounded-lg bg-zenprax-950/60 px-2.5 py-2 text-xs"
+        >
+          <div className="min-w-0">
+            <div className="truncate text-emerald-50">{c.username}</div>
+            <div className="truncate text-[10px] text-emerald-200/40">{c.urlMatch}</div>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="font-mono text-emerald-200/40">••••••</span>
+            {c.autoSubmit && (
+              <span className="rounded bg-sky-500/10 px-1.5 py-0.5 text-[10px] font-bold text-sky-300">
+                AUTO
+              </span>
+            )}
+          </div>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function TenantList({ entries }: { entries: TenantWhitelistEntry[] }) {
+  if (entries.length === 0) {
+    return (
+      <div className="mt-2 rounded-lg border border-dashed border-emerald-500/15 py-3 text-center text-[11px] text-emerald-200/40">
+        No trusted tenants configured.
+      </div>
+    );
+  }
+  return (
+    <ul className="mt-2 space-y-1.5">
+      {entries.map((e) => (
+        <li
+          key={`${e.provider}-${e.tenantId}`}
+          className="flex items-center justify-between rounded-lg bg-zenprax-950/60 px-2.5 py-2 text-xs"
+        >
+          <div className="min-w-0">
+            <div className="truncate text-emerald-50">{e.label}</div>
+            <div className="truncate font-mono text-[10px] text-emerald-200/40">{e.tenantId}</div>
+          </div>
+          <span className="shrink-0 rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-bold uppercase text-emerald-300">
+            {e.provider}
+          </span>
         </li>
       ))}
     </ul>
