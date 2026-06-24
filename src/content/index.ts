@@ -10,7 +10,12 @@
  * (bundled as a content-script stylesheet), so no page-side CSS is required.
  */
 
-import { describePasteThreat, isDangerousPaste } from '../lib/patterns';
+import {
+  describeMask,
+  describePasteThreat,
+  isDangerousPaste,
+  sanitizePaste,
+} from '../lib/patterns';
 import { detectTenant, isTrustedTenant } from '../lib/tenantDetector';
 import { addAuditLog, getSettings, onSettingsChanged, setSettings } from '../lib/storage';
 import { DEFAULT_SETTINGS, WHITELISTED_DOMAINS, type KibaSettings } from '../types';
@@ -156,6 +161,26 @@ function escapeHtml(value: string): string {
  * Feature 2: Anti-ClickFix paste sanitizer
  * ------------------------------------------------------------------ */
 
+/**
+ * Inserts sanitized text in place of the original paste. Uses the legacy but
+ * widely-supported execCommand('insertText') which integrates with the page's
+ * undo stack and respects the current selection/caret in inputs and
+ * contenteditable. Falls back to direct value manipulation for inputs.
+ */
+function insertSanitizedText(text: string): void {
+  if (document.execCommand('insertText', false, text)) return;
+
+  const el = document.activeElement;
+  if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
+    const start = el.selectionStart ?? el.value.length;
+    const end = el.selectionEnd ?? el.value.length;
+    el.value = el.value.slice(0, start) + text + el.value.slice(end);
+    const caret = start + text.length;
+    el.setSelectionRange(caret, caret);
+    el.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+}
+
 document.addEventListener(
   'paste',
   (event: ClipboardEvent) => {
@@ -163,17 +188,32 @@ document.addEventListener(
     if (settings && !settings.antiClickFixEnabled) return;
 
     const pastedText = event.clipboardData?.getData('text') ?? '';
-    if (!isDangerousPaste(pastedText)) return;
+
+    // Stage 1: dangerous OS commands are always fully blocked. Evaluated FIRST
+    // so a command can never slip through the masking path below.
+    if (isDangerousPaste(pastedText)) {
+      event.preventDefault();
+      event.stopPropagation();
+      showDangerOverlay(
+        'Blocked Dangerous Paste',
+        'The text you tried to paste contains administrative OS commands. The paste operation was cancelled.',
+      );
+      void addAuditLog('paste-block', describePasteThreat(pastedText), HOSTNAME);
+      return;
+    }
+
+    // Stage 2: in a restricted (foreign-tenant) context, mask confidential data
+    // and allow the cleansed text through instead of blocking the paste.
+    const maskEnabled = settings?.maskEnabled ?? true;
+    if (!maskEnabled || !isRestrictedContext()) return;
+
+    const result = sanitizePaste(pastedText);
+    if (!result.masked) return;
 
     event.preventDefault();
     event.stopPropagation();
-
-    const detail = describePasteThreat(pastedText);
-    showDangerOverlay(
-      'Blocked Dangerous Paste',
-      'The text you tried to paste contains administrative OS commands. The paste operation was cancelled.',
-    );
-    void addAuditLog('paste-block', detail, HOSTNAME);
+    insertSanitizedText(result.sanitized);
+    void addAuditLog('paste-mask', describeMask(result), HOSTNAME);
   },
   true, // capture phase: intercept before the page sees it
 );
