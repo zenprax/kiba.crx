@@ -10,6 +10,9 @@
 
 import { DEFAULT_SETTINGS } from '../types';
 import { getSettings, setSettings } from '../lib/storage';
+import { initAuditor, scanExtensions } from './auditor';
+import { initSyncManager } from './syncManager';
+import { initAuthHandler } from './authHandler';
 
 /** Message contract between content script and background. */
 interface NotifyMessage {
@@ -24,6 +27,8 @@ chrome.runtime.onInstalled.addListener(async () => {
   // Merge defaults in without clobbering any settings from a previous install.
   const current = await getSettings();
   await setSettings({ ...DEFAULT_SETTINGS, ...current });
+  // Run an initial shadow-IT scan right after install/update.
+  void scanExtensions();
 });
 
 chrome.runtime.onMessage.addListener((message: KibaMessage) => {
@@ -39,3 +44,9 @@ chrome.runtime.onMessage.addListener((message: KibaMessage) => {
   // No async response needed.
   return false;
 });
+
+// Phase-2 background subsystems: extension auditing, pull-based policy sync,
+// and TTL/standalone auth handling.
+initAuditor();
+initSyncManager();
+initAuthHandler();

@@ -22,7 +22,7 @@ export default defineManifest({
     48: 'icons/icon48.png',
     128: 'icons/icon128.png',
   },
-  permissions: ['declarativeNetRequest', 'storage', 'notifications'],
+  permissions: ['declarativeNetRequest', 'storage', 'notifications', 'management', 'alarms'],
   host_permissions: ['<all_urls>'],
   background: {
     service_worker: 'src/background/index.ts',

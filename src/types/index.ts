@@ -13,7 +13,8 @@ export type AuditEventType =
   | 'bypass-grant'
   | 'paste-mask'
   | 'sso-fill'
-  | 'tenant-block';
+  | 'tenant-block'
+  | 'extension-audit';
 
 /** A single local audit-log entry shown in the popup dashboard. */
 export interface AuditLogEntry {
@@ -73,6 +74,39 @@ export interface SsoCredential {
 }
 
 /* ------------------------------------------------------------------ *
+ * Operating mode & authentication / standalone state
+ * ------------------------------------------------------------------ */
+
+/**
+ * Enforcement mode for blocking actions.
+ *  - `ENFORCE`: blocks (paste reject, file gate) are actually applied.
+ *  - `DRY_RUN`: blocks are simulated — no preventDefault, only `[DRY_RUN]`
+ *    audit-log entries are produced. Acts as a safe switch for IT pilots.
+ */
+export type KibaMode = 'ENFORCE' | 'DRY_RUN';
+
+/**
+ * What the edge does when offline AND the SSO/auth TTL has expired.
+ *  - `LOCKDOWN`: block everything (fail closed).
+ *  - `FAIL_OPEN`: allow everything (fail open).
+ * Note: the pseudo-SSO feature is always locked the moment the edge goes
+ * offline, independent of this strategy.
+ */
+export type OfflineStrategy = 'LOCKDOWN' | 'FAIL_OPEN';
+
+/** TTL-backed local auth state used for standalone (offline) behaviour. */
+export interface KibaAuthState {
+  /**
+   * Epoch ms when the SSO/auth cache expires, or null when never
+   * authenticated. The pseudo-SSO feature is only usable while online and
+   * before this expiry.
+   */
+  ssoTtlExpiresAt: number | null;
+  /** Behaviour once offline and the TTL has expired. */
+  offlineStrategy: OfflineStrategy;
+}
+
+/* ------------------------------------------------------------------ *
  * Settings
  * ------------------------------------------------------------------ */
 
@@ -92,6 +126,15 @@ export interface KibaSettings {
   maskEnabled: boolean;
   /** When true, the pseudo-SSO autofill handler is active. */
   ssoEnabled: boolean;
+  /**
+   * Enforcement mode. In DRY_RUN, blocks are simulated and only logged so IT
+   * can pilot the policy without disrupting users.
+   */
+  mode: KibaMode;
+  /** When true, the background worker periodically audits installed extensions. */
+  auditExtensionsEnabled: boolean;
+  /** TTL-backed auth/standalone state (used by the background authHandler). */
+  auth: KibaAuthState;
   /** Trusted in-house tenants used to decide foreign-tenant restriction. */
   tenantWhitelist: TenantWhitelistEntry[];
   /** Mock shared-account credentials for the pseudo-SSO demo. */
@@ -106,6 +149,12 @@ export const DEFAULT_SETTINGS: KibaSettings = {
   oneTimeBypassActive: false,
   maskEnabled: true,
   ssoEnabled: false,
+  mode: 'ENFORCE',
+  auditExtensionsEnabled: true,
+  auth: {
+    ssoTtlExpiresAt: null,
+    offlineStrategy: 'FAIL_OPEN',
+  },
   tenantWhitelist: [
     { provider: 'slack', tenantId: 'T0ZENPRAX', label: 'Zenprax Slack' },
     { provider: 'google', tenantId: 'zenprax.com:0', label: 'Zenprax Workspace' },

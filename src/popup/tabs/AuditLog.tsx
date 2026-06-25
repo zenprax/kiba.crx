@@ -1,0 +1,72 @@
+import type { AuditEventType, AuditLogEntry } from '../../types';
+import { Card } from '../Popup';
+
+/** Short badge labels per audit event type. */
+const EVENT_LABEL: Record<AuditEventType, string> = {
+  'paste-block': 'PASTE',
+  'file-block': 'FILE',
+  'bypass-grant': 'BYPASS',
+  'paste-mask': 'MASK',
+  'sso-fill': 'SSO',
+  'tenant-block': 'TENANT',
+  'extension-audit': 'EXT',
+};
+
+/** Badge color classes per audit event type. */
+const EVENT_COLOR: Record<AuditEventType, string> = {
+  'paste-block': 'text-rose-300 bg-rose-500/10',
+  'file-block': 'text-amber-300 bg-amber-500/10',
+  'bypass-grant': 'text-emerald-300 bg-emerald-500/10',
+  'paste-mask': 'text-amber-300 bg-amber-500/10',
+  'sso-fill': 'text-sky-300 bg-sky-500/10',
+  'tenant-block': 'text-rose-300 bg-rose-500/10',
+  'extension-audit': 'text-violet-300 bg-violet-500/10',
+};
+
+/** Audit log tab: recent local security events, newest first. */
+export function AuditLog({ entries }: { entries: AuditLogEntry[] }) {
+  return (
+    <div className="space-y-3">
+      <Card>
+        <div className="flex items-center justify-between">
+          <div className="text-sm font-semibold">Audit Log</div>
+          <span className="text-[11px] text-emerald-200/50">{entries.length} events</span>
+        </div>
+        {entries.length === 0 ? (
+          <div className="mt-2 rounded-lg border border-dashed border-emerald-500/15 py-6 text-center text-xs text-emerald-200/40">
+            No security events recorded yet.
+          </div>
+        ) : (
+          <ul className="mt-2 max-h-72 space-y-1.5 overflow-y-auto pr-1">
+            {entries.map((e, i) => (
+              <li
+                key={`${e.ts}-${i}`}
+                className="flex items-start gap-2 rounded-lg bg-zenprax-950/60 px-2.5 py-2 text-xs"
+              >
+                <span
+                  className={`mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold ${EVENT_COLOR[e.type]}`}
+                >
+                  {EVENT_LABEL[e.type]}
+                </span>
+                <div className="min-w-0">
+                  <div className="truncate text-emerald-50">{e.detail}</div>
+                  <div className="text-[10px] text-emerald-200/40">
+                    {formatTime(e.ts)} · {e.domain || 'unknown'}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Card>
+    </div>
+  );
+}
+
+function formatTime(ts: number): string {
+  return new Date(ts).toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+}

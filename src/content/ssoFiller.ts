@@ -6,8 +6,8 @@
  * login form (optionally auto-submitting to minimise DOM exposure time).
  *
  * Credentials are read from settings (an MVP mock); they are only ever held in
- * the in-memory settings object passed in via `getSettings`. See ssoFiller.ts
- * for the production-security caveat.
+ * the in-memory settings object passed in via `getSettings`. See
+ * ../lib/ssoFiller for the production-security caveat.
  */
 
 import {
