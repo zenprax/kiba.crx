@@ -5,19 +5,18 @@
  * being inspected via DevTools, injects the shared-account credentials into the
  * login form (optionally auto-submitting to minimise DOM exposure time).
  *
- * Credentials are read from settings (an MVP mock); they are only ever held in
- * the in-memory settings object passed in via `getSettings`. See
- * ../lib/ssoFiller for the production-security caveat.
+ * 資格情報は content では保持せず、必要時に background（credentialBroker）へ
+ * 問い合わせて 1 件だけ受け取る。password は storage に永続化されず、この
+ * 問い合わせ応答のメモリ上にのみ存在する。
  */
 
 import {
   fillCredentials,
   isDevToolsLikelyOpen,
-  matchCredential,
   type FillResult,
 } from '../lib/ssoFiller';
 import { addAuditLog } from '../lib/storage';
-import type { KibaSettings } from '../types';
+import type { KibaSettings, SsoCredential } from '../types';
 
 /** How long to keep watching for a (possibly SPA-rendered) password field. */
 const OBSERVE_TIMEOUT_MS = 8000;
@@ -31,26 +30,35 @@ function hasLoginForm(): boolean {
   return document.querySelector('input[type="password"]') !== null;
 }
 
+/** background（credentialBroker）へこの URL 用の資格情報を 1 件問い合わせる。 */
+async function requestCredential(url: string): Promise<SsoCredential | null> {
+  const cred = (await chrome.runtime.sendMessage({
+    kind: 'kiba:get-credential',
+    url,
+  })) as SsoCredential | null;
+  return cred ?? null;
+}
+
 /**
  * Initialises the SSO handler. Reads live settings via `getSettings` so it
- * always honours the latest toggle/credential state. Safe to call once at
- * content-script startup.
+ * always honours the latest toggle state. Safe to call once at content-script
+ * startup. 資格情報そのものは background から取得する。
  */
-export function initSsoHandler(getSettings: () => KibaSettings | null): void {
+export async function initSsoHandler(getSettings: () => KibaSettings | null): Promise<void> {
   const settings = getSettings();
-  // Only proceed when enabled and a credential matches this page.
+  // Only proceed when the feature is enabled.
   if (!settings || !settings.ssoEnabled) return;
 
-  const cred = matchCredential(window.location.href, settings.ssoCredentials);
-  if (!cred) return;
-
   // DevTools-open policy: halt autofill so the password is never injected while
-  // someone is inspecting the DOM.
+  // someone is inspecting the DOM. 資格情報を取得する前にチェックする。
   if (isDevToolsLikelyOpen(window)) {
     notify('kiba.crx', 'SSO autofill halted: developer tools appear to be open.');
     void addAuditLog('sso-fill', 'SSO autofill blocked (DevTools detected)', window.location.hostname);
     return;
   }
+
+  const cred = await requestCredential(window.location.href);
+  if (!cred) return;
 
   const run = (): void => {
     const result: FillResult = fillCredentials(document, cred);

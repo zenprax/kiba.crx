@@ -29,8 +29,8 @@ export function Dashboard({
         <StatCard label="Items Blocked" value={blockedCount} />
         <StatCard
           label="One-Time Bypass"
-          value={settings.oneTimeBypassActive ? 'Armed' : 'Off'}
-          accent={settings.oneTimeBypassActive ? 'amber' : 'emerald'}
+          value={settings.oneTimeBypass ? 'Armed' : 'Off'}
+          accent={settings.oneTimeBypass ? 'amber' : 'emerald'}
         />
       </div>
 
@@ -88,21 +88,21 @@ export function Dashboard({
         <TenantList entries={settings.tenantWhitelist} />
       </Card>
 
-      {/* File control simulator */}
+      {/* One-Time Bypass control */}
       <Card>
-        <div className="text-sm font-semibold">File Control Simulator</div>
+        <div className="text-sm font-semibold">One-Time Upload Bypass</div>
         <div className="mt-1 text-xs text-emerald-200/60">
-          Grant a simulated one-time upload exception for testing on restricted
-          domains.
+          Request a single-use upload exception for restricted domains. Approval
+          is mediated by the admin console.
         </div>
         <button
           onClick={onGrantBypass}
-          disabled={settings.oneTimeBypassActive}
+          disabled={settings.oneTimeBypass !== null}
           className="mt-3 w-full rounded-lg bg-emerald-500 px-3 py-2 text-sm font-semibold text-zenprax-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {settings.oneTimeBypassActive
+          {settings.oneTimeBypass
             ? 'Bypass Armed — use one upload'
-            : 'Grant One-Time Bypass'}
+            : 'Request One-Time Bypass'}
         </button>
       </Card>
     </div>

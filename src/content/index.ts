@@ -92,7 +92,7 @@ function reconcile(s: KibaSettings | null): void {
     start('ssoFiller', () => {
       // initSsoHandler is fire-and-forget (no teardown); wrap to satisfy the
       // teardown contract. The handler self-disconnects its observer on timeout.
-      initSsoHandler(getCurrentSettings);
+      void initSsoHandler(getCurrentSettings);
       return () => {};
     });
   } else {

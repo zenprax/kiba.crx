@@ -17,6 +17,10 @@ export function Popup() {
   const [settings, setLocalSettings] = useState<KibaSettings>(DEFAULT_SETTINGS);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
+  const [credStatus, setCredStatus] = useState<{ configured: boolean; count: number }>({
+    configured: false,
+    count: 0,
+  });
 
   useEffect(() => {
     void getSettings().then((s) => {
@@ -25,6 +29,16 @@ export function Popup() {
     });
     return onSettingsChanged(setLocalSettings);
   }, []);
+
+  // 資格情報の同期状態を background（credentialBroker）へ問い合わせる。
+  // 資格情報そのものは受け取らず、構成有無と件数のみ取得する。
+  useEffect(() => {
+    void chrome.runtime
+      .sendMessage({ kind: 'kiba:credential-status' })
+      .then((res: { configured: boolean; count: number } | undefined) => {
+        if (res) setCredStatus(res);
+      });
+  }, [settings.ssoEnabled]);
 
   const blockedCount = useMemo(
     () =>
@@ -58,7 +72,12 @@ export function Popup() {
   }
 
   async function grantBypass() {
-    setLocalSettings(await setSettings({ oneTimeBypassActive: true }));
+    // アクティブタブのホスト名を対象に承認を要求する。承認は background
+    // （bypassManager）に一元化され、付与は onSettingsChanged 経由で反映される。
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!tab?.url) return;
+    const domain = new URL(tab.url).hostname;
+    await chrome.runtime.sendMessage({ kind: 'kiba:request-bypass', domain });
   }
 
   const isDryRun = settings.mode === 'DRY_RUN';
@@ -119,7 +138,7 @@ export function Popup() {
           />
         )}
         {activeTab === 'sso' && settings.ssoEnabled && (
-          <SsoList creds={settings.ssoCredentials} />
+          <SsoList configured={credStatus.configured} count={credStatus.count} />
         )}
         {activeTab === 'audit' && <AuditLog entries={settings.auditLog} />}
       </main>

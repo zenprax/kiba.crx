@@ -1,21 +1,20 @@
 /**
- * Pull-based policy sync skeleton.
+ * Pull 型ポリシー同期。
  *
- * Per spec, kiba.crx never opens a WebSocket. Policy updates are *pulled* from
- * a static URL on a schedule (chrome.alarms), on startup, and on network
- * recovery. The fetched payload is an encrypted policy JSON decrypted with a
- * customer-managed key (BYOK) via crypto.subtle.
+ * 仕様どおり kiba.crx は WebSocket を張らない。ポリシー更新はスケジュール
+ * （chrome.alarms）・起動時・ネットワーク復帰時に静的 URL から *pull* する。
+ * 取得ペイロードは顧客管理鍵（BYOK）で AES-GCM 暗号化された JSON で、
+ * crypto.subtle で復号する。
  *
- * This OSS build ships without a configured endpoint, so the manager is a
- * no-op skeleton: it keeps the local default policy and leaves the real
- * fetch/decrypt path as TODOs.
+ * エンドポイントと鍵は src/lib/consoleClient.ts の CONSOLE_CONFIG に集約。
+ * 未設定（null）のときは no-op となり、ローカル既定ポリシーが維持される。
  */
 
-/**
- * Static policy endpoint. Null in the OSS build — when null, syncing is a
- * no-op and the locally stored defaults remain authoritative.
- */
-const POLICY_URL: string | null = null;
+import { decryptEnvelope, type EncryptedEnvelope } from '../lib/crypto';
+import { CONSOLE_CONFIG, resolveKey } from '../lib/consoleClient';
+import { parsePolicyPayload, type PolicyPatch } from '../lib/policySchema';
+import { getSettings, setSettings } from '../lib/storage';
+import type { KibaSettings } from '../types';
 
 /** chrome.alarms name used to schedule periodic policy pulls. */
 const SYNC_ALARM = 'kiba:sync';
@@ -24,21 +23,45 @@ const SYNC_ALARM = 'kiba:sync';
 const SYNC_PERIOD_MINUTES = 30;
 
 /**
- * Pulls and applies the remote policy. Immediately returns when no endpoint is
- * configured (OSS fallback to local defaults).
+ * 検証済みポリシーパッチを現在の設定へ適用する。auth は部分パッチなので既存値と
+ * 合成してから保存する（setSettings は浅いマージのため auth は丸ごと置換される）。
+ */
+async function applyPolicyPatch(patch: PolicyPatch): Promise<void> {
+  const { auth: authPatch, ...rest } = patch;
+  const update: Partial<KibaSettings> = { ...rest };
+
+  if (authPatch) {
+    const current = await getSettings();
+    update.auth = { ...current.auth, ...authPatch };
+  }
+
+  await setSettings(update);
+}
+
+/**
+ * リモートポリシーを pull して適用する。エンドポイント／鍵が未設定のときは
+ * 即座に return（OSS フォールバック：ローカル既定を維持）。fetch 失敗・復号失敗・
+ * スキーマ不正はいずれもローカル現状維持で握りつぶす（不正ポリシーは適用しない）。
  */
 export async function syncPolicy(): Promise<void> {
-  if (POLICY_URL === null) return;
+  const { policyUrl, keyRef } = CONSOLE_CONFIG;
+  if (policyUrl === null || keyRef === null) return;
 
-  // TODO: fetch encrypted policy payload from POLICY_URL.
-  // const res = await fetch(POLICY_URL, { cache: 'no-store' });
-  // const ciphertext = await res.arrayBuffer();
+  try {
+    const res = await fetch(policyUrl, { cache: 'no-store' });
+    if (!res.ok) return;
+    const envelope = (await res.json()) as EncryptedEnvelope;
 
-  // TODO: decrypt with crypto.subtle (BYOK) using a customer-managed key,
-  // e.g. crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext).
+    const key = await resolveKey(keyRef);
+    const plaintext = await decryptEnvelope(envelope, key);
+    const patch = parsePolicyPayload(JSON.parse(plaintext));
+    if (!patch) return;
 
-  // TODO: validate and merge the decrypted policy into chrome.storage.local
-  // via setSettings(), then refresh dependent alarms.
+    await applyPolicyPatch(patch);
+  } catch {
+    // ネットワーク／復号／パース失敗時はローカル既定を維持する。
+    return;
+  }
 }
 
 /**

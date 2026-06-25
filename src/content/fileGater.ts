@@ -8,6 +8,7 @@
  */
 
 import { isDryRun, tagDetail } from '../lib/dryRun';
+import { consumeBypass, isBypassValid } from '../lib/bypass';
 import { addAuditLog, getSettings as readSettings, setSettings } from '../lib/storage';
 import type { KibaSettings } from '../types';
 import { isRestrictedContext } from './tenant';
@@ -28,9 +29,10 @@ async function handleUploadAttempt(
   if (!isRestrictedContext(settings)) return false;
 
   const current = await readSettings();
-  if (current.oneTimeBypassActive) {
-    // Consume the single-use token and allow this upload through.
-    await setSettings({ oneTimeBypassActive: false });
+  const grant = current.oneTimeBypass;
+  if (grant && isBypassValid(grant, HOSTNAME)) {
+    // 有効な単回付与を 1 回消費し、このアップロードを通す。
+    await setSettings({ oneTimeBypass: consumeBypass(grant) });
     notify('kiba.crx', 'One-Time Upload allowed and consumed.');
     return false;
   }
@@ -108,8 +110,9 @@ export function initFileGater(getSettings: () => KibaSettings | null): () => voi
     event.stopPropagation();
 
     void readSettings().then(async (current) => {
-      if (current.oneTimeBypassActive) {
-        await setSettings({ oneTimeBypassActive: false });
+      const grant = current.oneTimeBypass;
+      if (grant && isBypassValid(grant, HOSTNAME)) {
+        await setSettings({ oneTimeBypass: consumeBypass(grant) });
         notify('kiba.crx', 'One-Time drop allowed and consumed. Please drop the file again.');
         return;
       }

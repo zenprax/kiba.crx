@@ -6,8 +6,6 @@
  * Moved out of content/index.ts so the paste/file modules can share them.
  */
 
-import { addAuditLog, setSettings } from '../lib/storage';
-
 /** Sends a notification request to the background service worker. */
 export function notify(title: string, message: string): void {
   chrome.runtime.sendMessage({ kind: 'kiba:notify', title, message });
@@ -48,12 +46,11 @@ export function showDangerOverlay(title: string, body: string): void {
 }
 
 /**
- * Modal asking the user to request a one-time upload bypass.
+ * One-Time Bypass を要求するモーダル。
  *
- * `onConfirm` runs when the user requests the bypass; it lets the caller decide
- * how the one-time token is granted/logged. When omitted, the legacy behaviour
- * is preserved: the single-use token is activated and the grant is recorded
- * directly from here.
+ * `onConfirm` が渡された場合はそれを実行する。省略時は background の承認経路
+ * （bypassManager）へ要求メッセージを送る。承認・付与・audit 記録はすべて
+ * background が一元的に行うため、ここでは storage を直接書き換えない。
  */
 export function showRequestBypassModal(
   domain: string,
@@ -85,9 +82,8 @@ export function showRequestBypassModal(
     if (onConfirm) {
       await onConfirm();
     } else {
-      // Legacy behaviour: activate the simulated single-use token and record it.
-      await setSettings({ oneTimeBypassActive: true });
-      await addAuditLog('bypass-grant', 'One-Time Bypass granted', domain);
+      // 承認は background（bypassManager）に一元化。付与・audit 記録もそちらで行う。
+      await chrome.runtime.sendMessage({ kind: 'kiba:request-bypass', domain });
       notify('kiba.crx', 'One-Time Bypass granted. Re-select your file to upload.');
     }
     removeOverlay();
