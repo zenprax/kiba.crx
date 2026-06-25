@@ -49,6 +49,7 @@ export async function scanExtensions(): Promise<void> {
   if (!settings.auditExtensionsEnabled) return;
 
   const selfId = chrome.runtime.id;
+  if (typeof chrome.management?.getAll !== 'function') return;
   const all = await chrome.management.getAll();
 
   for (const ext of all) {
