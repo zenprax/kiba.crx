@@ -54,20 +54,19 @@ export interface TenantWhitelistEntry {
  * ------------------------------------------------------------------ */
 
 /**
- * A shared-account credential used for the pseudo-SSO autofill demo.
+ * 共有アカウントの資格情報（擬似 SSO autofill 用）。
  *
- * NOTE (production requirement): the spec mandates that real credentials are
- * NEVER persisted in plaintext and only ever held in a memory-resident JS
- * variable fetched from the admin console. For this MVP demo we store mock
- * credentials in chrome.storage.local so the popup can manage them; a
- * production build must replace this with a secure background-mediated fetch.
+ * セキュリティ要件: 実資格情報は **平文で永続化しない**。コンソールから取得し、
+ * background のメモリ常駐キャッシュ（src/background/credentialBroker.ts）にのみ
+ * 保持する。この型は chrome.storage には保存されず、broker と content 間の
+ * メモリ上の受け渡しにのみ用いる。
  */
 export interface SsoCredential {
   /** Substring matched against the page URL, e.g. "github.com/login". */
   urlMatch: string;
   /** Account username/email to inject. */
   username: string;
-  /** Account password to inject (mock value in the MVP). */
+  /** Account password to inject. メモリ常駐のみ・storage 非永続。 */
   password: string;
   /** When true, the form is submitted immediately after filling. */
   autoSubmit: boolean;
@@ -94,6 +93,29 @@ export type KibaMode = 'ENFORCE' | 'DRY_RUN';
  */
 export type OfflineStrategy = 'LOCKDOWN' | 'FAIL_OPEN';
 
+/* ------------------------------------------------------------------ *
+ * One-Time Bypass（ファイルアップロードの単回例外）
+ * ------------------------------------------------------------------ */
+
+/**
+ * One-Time Bypass の付与レコード。承認エンジン（コンソール、または未設定時の
+ * ローカル即時承認）が発行する。状態遷移:
+ *   null ─(承認)→ {remainingUses:1} ─(消費)→ null
+ *   expiresAt < now でアクセスした場合は失効として null 扱い
+ */
+export interface BypassGrant {
+  /** 承認 ID（コンソール承認時はサーバ発番、ローカル承認時は UUID）。 */
+  id: string;
+  /** この付与が有効なホスト名。 */
+  domain: string;
+  /** 発行時刻（epoch ms）。 */
+  grantedAt: number;
+  /** 失効時刻（epoch ms）。TTL。 */
+  expiresAt: number;
+  /** 残り使用回数（単回付与なら 1）。消費でデクリメント。 */
+  remainingUses: number;
+}
+
 /** TTL-backed local auth state used for standalone (offline) behaviour. */
 export interface KibaAuthState {
   /**
@@ -115,10 +137,10 @@ export interface KibaSettings {
   /** When true, the content script inspects and blocks dangerous pastes. */
   antiClickFixEnabled: boolean;
   /**
-   * MVP "One-Time Permission" simulation token. When true, the next file
-   * upload on a restricted domain is allowed and the token is consumed.
+   * One-Time Bypass の付与状態。承認エンジン経由で発行される TTL 付きレコード。
+   * null のとき有効な例外なし。
    */
-  oneTimeBypassActive: boolean;
+  oneTimeBypass: BypassGrant | null;
   /**
    * When true, on restricted (foreign-tenant) contexts pastes containing
    * confidential data are sanitized (masked) instead of passing through.
@@ -137,8 +159,6 @@ export interface KibaSettings {
   auth: KibaAuthState;
   /** Trusted in-house tenants used to decide foreign-tenant restriction. */
   tenantWhitelist: TenantWhitelistEntry[];
-  /** Mock shared-account credentials for the pseudo-SSO demo. */
-  ssoCredentials: SsoCredential[];
   /** Rolling list of recent local security events (newest first). */
   auditLog: AuditLogEntry[];
 }
@@ -146,7 +166,7 @@ export interface KibaSettings {
 /** Default settings applied on install and used as a fallback when reading storage. */
 export const DEFAULT_SETTINGS: KibaSettings = {
   antiClickFixEnabled: true,
-  oneTimeBypassActive: false,
+  oneTimeBypass: null,
   maskEnabled: true,
   ssoEnabled: false,
   mode: 'ENFORCE',
@@ -159,14 +179,6 @@ export const DEFAULT_SETTINGS: KibaSettings = {
     { provider: 'slack', tenantId: 'T0ZENPRAX', label: 'Zenprax Slack' },
     { provider: 'google', tenantId: 'zenprax.com:0', label: 'Zenprax Workspace' },
     { provider: 'github', tenantId: 'zenprax', label: 'Zenprax GitHub Org' },
-  ],
-  ssoCredentials: [
-    {
-      urlMatch: 'github.com/login',
-      username: 'kiba-demo@zenprax.com',
-      password: 'demo-shared-secret',
-      autoSubmit: false,
-    },
   ],
   auditLog: [],
 };

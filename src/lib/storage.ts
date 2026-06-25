@@ -44,6 +44,22 @@ export async function addAuditLog(
 }
 
 /**
+ * 旧バージョンが平文で保存していた SSO 資格情報（`ssoCredentials` キー）を、
+ * 起動時に 1 度だけ storage から削除する。資格情報は本番では background の
+ * メモリ常駐キャッシュにのみ保持され、平文で永続化されることはない。
+ *
+ * 更新インストール後に古い平文機密が残らないことを保証するためのマイグレーション。
+ */
+export async function purgeLegacyCredentials(): Promise<void> {
+  const result = await chrome.storage.local.get(SETTINGS_KEY);
+  const stored = result[SETTINGS_KEY];
+  if (stored && typeof stored === 'object' && 'ssoCredentials' in stored) {
+    delete (stored as Record<string, unknown>).ssoCredentials;
+    await chrome.storage.local.set({ [SETTINGS_KEY]: stored });
+  }
+}
+
+/**
  * Subscribes to settings changes. Returns an unsubscribe function.
  * The callback receives the freshly merged settings object.
  */
