@@ -126,6 +126,75 @@ export interface KibaAuthState {
   ssoTtlExpiresAt: number | null;
   /** Behaviour once offline and the TTL has expired. */
   offlineStrategy: OfflineStrategy;
+  /**
+   * SSO/OIDC（SAML/OIDC IdP）で取得した ID トークン（JWT）。属性ベース仕分けの
+   * claims（email / groups）の供給源。未認証時は null。
+   * 署名検証は IdP 側／別レイヤーの責務で、ここでは仕分け用に payload のみ参照する。
+   */
+  idToken: string | null;
+}
+
+/* ------------------------------------------------------------------ *
+ * Feature: エンタープライズ向け動的ポリシー配信（属性ベース仕分け）
+ * ------------------------------------------------------------------ */
+
+/**
+ * JWT（ID トークン）の claims から、ポリシー仕分けに用いる最小サブセット。
+ * IdP により claim 名は揺れるため、email / groups 以外も保持できるよう
+ * インデックスシグネチャを持たせる（値は unknown で any は使わない）。
+ */
+export interface PolicyClaims {
+  /** ユーザーのメールアドレス（仕分けの主キー）。 */
+  email?: string;
+  /** ユーザーの所属グループ（SAML/OIDC の groups claim）。 */
+  groups?: string[];
+  /** その他の claim（未使用だが保持はする）。 */
+  [claim: string]: unknown;
+}
+
+/**
+ * 設定パッチ。KibaSettings の浅い部分集合だが、auth だけは部分更新を許すため
+ * Partial<KibaAuthState> として表現する（呼び出し側で既存 auth と合成する）。
+ * policySchema.PolicyPatch / policyFilter.compileActiveSettings の共通土台。
+ */
+export type KibaSettingsPatch = Partial<Omit<KibaSettings, 'auth'>> & {
+  auth?: Partial<KibaAuthState>;
+};
+
+/**
+ * 設定をどのユーザーへ配るかのターゲット条件。emails と groups は OR で評価し、
+ * いずれか 1 つでも一致すれば対象とみなす。両方未指定（空ターゲット）は「全員」。
+ */
+export interface PolicyTarget {
+  /** 対象メールアドレスの完全一致リスト（小文字で比較）。 */
+  emails?: string[];
+  /** 対象グループ。claims.groups にいずれか 1 つでも含まれれば一致。 */
+  groups?: string[];
+}
+
+/** ターゲット付きの設定断片。target にマッチしたユーザーにのみ value を適用する。 */
+export interface TargetedItem<T> {
+  /** 適用条件。 */
+  target: PolicyTarget;
+  /** マッチしたときに適用する値。 */
+  value: T;
+}
+
+/**
+ * 組織から配信される暗号化マスターポリシー（復号後の平文 JSON 形）。
+ * base を全員に適用し、overrides を属性ベースで上書きしてユーザー個別の
+ * 実効設定（KibaSettings の部分集合）をコンパイルする。
+ */
+export interface KibaMasterPolicy {
+  /** スキーマ版（前方互換のための番号）。 */
+  version: number;
+  /** 全員に適用される基底設定（属性に依らない）。 */
+  base: KibaSettingsPatch;
+  /**
+   * 属性ベースの上書き。配列順に評価し、マッチしたものを後勝ちでマージする
+   * （配列後方の項目が優先）。
+   */
+  overrides?: TargetedItem<KibaSettingsPatch>[];
 }
 
 /* ------------------------------------------------------------------ *
@@ -155,6 +224,11 @@ export interface KibaSettings {
   mode: KibaMode;
   /** When true, the background worker periodically audits installed extensions. */
   auditExtensionsEnabled: boolean;
+  /**
+   * 組織のマスターポリシー配下にあるとき true。Popup を読み取り専用にロックダウン
+   * するための実効フラグ（compileActiveSettings が立てる）。個人利用時は false。
+   */
+  isManaged: boolean;
   /** TTL-backed auth/standalone state (used by the background authHandler). */
   auth: KibaAuthState;
   /** Trusted in-house tenants used to decide foreign-tenant restriction. */
@@ -171,9 +245,11 @@ export const DEFAULT_SETTINGS: KibaSettings = {
   ssoEnabled: false,
   mode: 'ENFORCE',
   auditExtensionsEnabled: true,
+  isManaged: false,
   auth: {
     ssoTtlExpiresAt: null,
     offlineStrategy: 'FAIL_OPEN',
+    idToken: null,
   },
   tenantWhitelist: [
     { provider: 'slack', tenantId: 'T0ZENPRAX', label: 'Zenprax Slack' },
