@@ -18,7 +18,7 @@ import {
   decodeJwtPayload,
   decryptPolicyBlob,
 } from '../lib/policyFilter';
-import { getSettings, setSettings } from '../lib/storage';
+import { addAuditLog, getSettings, setSettings } from '../lib/storage';
 import type { KibaSettings, KibaSettingsPatch, PolicyClaims } from '../types';
 
 /** chrome.alarms name used to schedule periodic policy pulls. */
@@ -28,25 +28,11 @@ const SYNC_ALARM = 'kiba:sync';
 const SYNC_PERIOD_MINUTES = 30;
 
 /**
- * 組織配信ポリシー（policy.bin）の取得元ベース URL。`${policyId}` 部分に
- * managed/local の policyId(UUID) を埋めてユーザー（テナント）別の暗号 blob を pull する。
+ * 組織配信ポリシー（policy.bin / iv.txt）の取得元ベース URL。
+ * Cloudflare プロキシ経由で kiba-api.zenprax.com をフロントエンドとし、
+ * `${policyId}` 部分にテナント別の UUID を埋める。
  */
-const POLICY_BASE_URL = 'https://policy.zenprax.com/v1/users';
-
-/** AES-GCM の初期化ベクトル長（バイト）。blob 先頭をこの長さだけ IV として剥がす。 */
-const IV_LEN = 12;
-
-/**
- * 暫定モック復号鍵（32 バイト）。本番ではコンソール公開後に BYOK 鍵
- * （chrome.storage.local.customDecryptionKey）を使う。鍵未設定時のフォールバック。
- * 0..31 の固定バイト列で、デモ／開発用途のみ。
- */
-const MOCK_KEY: Uint8Array<ArrayBuffer> = (() => {
-  const buf = new ArrayBuffer(32);
-  const bytes = new Uint8Array(buf);
-  for (let i = 0; i < 32; i++) bytes[i] = i;
-  return bytes;
-})();
+const POLICY_BASE_URL = 'https://kiba-api.zenprax.com/v1/users';
 
 /**
  * 検証済みポリシーパッチを現在の設定へ適用する。auth は部分パッチなので既存値と
@@ -114,24 +100,34 @@ async function resolvePolicyId(): Promise<string | null> {
 }
 
 /**
- * BYOK 復号鍵の生バイト列を解決する。個人が Popup で保存した Base64 鍵
- * （customDecryptionKey）を優先し、未設定ならコンソール公開までの暫定 MOCK_KEY。
+ * chrome.storage.local の `decryptionKey`（Base64 または生テキスト）を取得し、
+ * SHA-256 でハッシュ化して 32 バイトの AES-GCM 鍵バッファを返す。
+ *
+ * ユーザーが入力した任意の文字列でも安全に 256 bit 鍵に正規化できる。
+ * decryptionKey が未設定の場合は null を返し、呼び出し側で同期をスキップさせる。
  */
-async function resolveRawKey(): Promise<Uint8Array<ArrayBuffer>> {
-  const local = await chrome.storage.local.get('customDecryptionKey');
-  if (typeof local.customDecryptionKey === 'string' && local.customDecryptionKey.length > 0) {
-    return base64ToBytes(local.customDecryptionKey);
+async function resolveRawKey(): Promise<Uint8Array<ArrayBuffer> | null> {
+  const local = await chrome.storage.local.get('decryptionKey');
+  if (typeof local.decryptionKey !== 'string' || local.decryptionKey.length === 0) {
+    return null;
   }
-  return MOCK_KEY;
+  // テキスト文字列を UTF-8 バイト列にエンコードし SHA-256 で 32 バイト鍵に変換する。
+  const encoded = new TextEncoder().encode(local.decryptionKey);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', encoded);
+  return new Uint8Array(hashBuffer) as Uint8Array<ArrayBuffer>;
 }
 
 /**
- * エンタープライズ向け：policyId をもとに暗号化マスターポリシー（policy.bin）を
- * pull し、現在のユーザーの JWT クレームで属性ベースにフィルタして適用する。
+ * エンタープライズ向け：policyId をもとに暗号化マスターポリシー（policy.bin）と
+ * 復号用 IV（iv.txt）を並行 fetch し、BYOK 鍵で復号して現在のユーザーの JWT
+ * クレームで属性ベースにフィルタして適用する。
  *
- * policyId が無い場合は既存の CONSOLE_CONFIG 経路（{@link syncPolicy}）へフォール
- * バックする。fetch／復号／パース失敗はすべて握りつぶし、ローカル現状を維持する
- * （不正なポリシーは適用しない）。
+ * 設計ポイント：
+ *  - policy.bin と iv.txt を Promise.all で並行取得することで RTT を節約する。
+ *  - iv.txt は Base64 エンコードされた 12 バイトの IV テキスト。
+ *  - BYOK 鍵は SHA-256 でハッシュ化して 32 バイトに正規化する。
+ *  - policyId が無い場合は CONSOLE_CONFIG 経路（{@link syncPolicy}）へフォールバック。
+ *  - fetch／復号／パース失敗はすべて握りつぶし、ローカル現状を維持する。
  */
 export async function syncManagedPolicy(): Promise<void> {
   const policyId = await resolvePolicyId();
@@ -141,18 +137,32 @@ export async function syncManagedPolicy(): Promise<void> {
     return;
   }
 
+  // decryptionKey が未設定なら同期を行わない（不完全な状態で復号試行しない）。
+  const rawKey = await resolveRawKey();
+  if (rawKey === null) return;
+
   try {
-    const url = `${POLICY_BASE_URL}/${encodeURIComponent(policyId)}/policy.bin`;
-    const res = await fetch(url, { cache: 'no-store' });
-    if (!res.ok) return;
+    const encodedId = encodeURIComponent(policyId);
+    const policyBinUrl = `${POLICY_BASE_URL}/${encodedId}/policy.bin`;
+    const ivTxtUrl = `${POLICY_BASE_URL}/${encodedId}/iv.txt`;
 
-    // blob レイアウト: [先頭 12 バイト = IV][残り = AES-GCM 暗号文＋認証タグ]。
-    const blob = await res.arrayBuffer();
-    if (blob.byteLength <= IV_LEN) return;
-    const iv = new Uint8Array(blob.slice(0, IV_LEN));
-    const ciphertext = blob.slice(IV_LEN);
+    // policy.bin（バイナリ）と iv.txt（プレーンテキスト Base64）を並行 fetch する。
+    const [blobRes, ivRes] = await Promise.all([
+      fetch(policyBinUrl, { cache: 'no-store' }),
+      fetch(ivTxtUrl, { cache: 'no-store' }),
+    ]);
 
-    const rawKey = await resolveRawKey();
+    if (!blobRes.ok || !ivRes.ok) return;
+
+    // iv.txt: Base64 文字列 → 12 バイトの Uint8Array に変換する。
+    const ivB64 = (await ivRes.text()).trim();
+    const iv = base64ToBytes(ivB64) as Uint8Array<ArrayBuffer>;
+
+    // policy.bin: 暗号文（GCM 認証タグ含む）の ArrayBuffer。
+    const ciphertext = await blobRes.arrayBuffer();
+    if (ciphertext.byteLength === 0) return;
+
+    // BYOK 鍵（SHA-256 ハッシュ済み 32 バイト）で AES-GCM 復号する。
     const masterPolicy = await decryptPolicyBlob(ciphertext, rawKey, iv);
 
     // 現在のユーザーの JWT クレーム（ストレージの auth.idToken）で仕分ける。
@@ -162,6 +172,9 @@ export async function syncManagedPolicy(): Promise<void> {
 
     const patch = compileActiveSettings(masterPolicy, claims, idToken);
     await applyPolicyPatch(patch);
+
+    // 監査ログに同期成功を記録する。
+    await addAuditLog('extension-audit', 'Policy successfully synced from Cloud', 'kiba-api.zenprax.com');
   } catch {
     // ネットワーク／復号／パース失敗時はローカル現状を維持する。
     return;
@@ -174,6 +187,10 @@ export async function syncManagedPolicy(): Promise<void> {
  *
  * 起動時・タイマー・オンライン復帰のいずれも {@link syncManagedPolicy} を起点に
  * する（内部で policyId 有無により組織経路 / CONSOLE_CONFIG 経路を選択）。
+ *
+ * 注意：online イベントは authHandler（initAuthHandler）でも購読するが、
+ * ここでは alarm と起動時同期のみを担当し、online イベントは authHandler に
+ * 集約して二重登録を避ける。
  */
 export function initSyncManager(): void {
   chrome.alarms.create(SYNC_ALARM, { periodInMinutes: SYNC_PERIOD_MINUTES });
@@ -183,9 +200,6 @@ export function initSyncManager(): void {
     void syncManagedPolicy();
   });
 
-  // Trigger a pull on startup and whenever connectivity returns.
+  // 起動時に即時 pull する。online イベントは authHandler が担当する。
   void syncManagedPolicy();
-  self.addEventListener('online', () => {
-    void syncManagedPolicy();
-  });
 }
