@@ -11,5 +11,3 @@ yarn-error.log*
 
 # Internal spec / assistant docs (not published)
 CLAUDE.md
-kiba_crx_spec.md
-kiba_master_spec.md
