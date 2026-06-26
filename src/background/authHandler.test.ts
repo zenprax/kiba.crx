@@ -16,7 +16,7 @@ function makeSettings(
 ): KibaSettings {
   return {
     ...DEFAULT_SETTINGS,
-    auth: { ssoTtlExpiresAt, offlineStrategy },
+    auth: { ssoTtlExpiresAt, offlineStrategy, idToken: null },
   };
 }
 

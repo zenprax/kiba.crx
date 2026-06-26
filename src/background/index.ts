@@ -15,7 +15,7 @@ import {
   setSettings,
 } from '../lib/storage';
 import { initAuditor, scanExtensions } from './auditor';
-import { initSyncManager } from './syncManager';
+import { initSyncManager, syncManagedPolicy } from './syncManager';
 import { initAuthHandler } from './authHandler';
 import {
   getCredentialCount,
@@ -49,11 +49,17 @@ interface CredentialStatusMessage {
   kind: 'kiba:credential-status';
 }
 
+/** popup → background: クラウド同期設定の保存後、即時にポリシー同期を要求する。 */
+interface RequestSyncMessage {
+  kind: 'kiba:request-sync';
+}
+
 type KibaMessage =
   | NotifyMessage
   | GetCredentialMessage
   | RequestBypassMessage
-  | CredentialStatusMessage;
+  | CredentialStatusMessage
+  | RequestSyncMessage;
 
 chrome.runtime.onInstalled.addListener(async () => {
   // 旧バージョンが残した平文資格情報を削除する（機密がディスクに残らないよう保証）。
@@ -95,6 +101,11 @@ chrome.runtime.onMessage.addListener(
           count: getCredentialCount(),
         });
         return false; // 同期応答。
+
+      case 'kiba:request-sync':
+        // 個人用クラウド同期設定の保存直後に即時 pull する。応答は不要。
+        void syncManagedPolicy();
+        return false;
 
       default:
         return false;
