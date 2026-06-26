@@ -1,0 +1,72 @@
+openapi: 3.0.3
+info:
+  title: Kiba Policy Delivery API
+  description: |
+    Zenprax Browser Security (kiba.crx) がポリシーおよび初期化ベクトル（IV）を取得するための、完全静的・認証なし（NO-AUTH）のAPI仕様です。
+
+    ### 🛡️ セキュリティ設計思想
+    本システムは、通信路の認証に依存せず、配信されるデータ自体が顧客固有の鍵（BYOK）でAES-GCM 256bit暗号化されていることを前提としています。
+    そのため、このエンドポイントは「認証なしの完全な静的ファイルホスティング（CDNキャッシュ）」として動作し、インフラコストの完全なゼロ化と、ダウンタイムの完全な回避を両立させています。
+
+    ### 🔑 Policy ID (UUIDv4) の難読化
+    他社のポリシーリストの探索・列挙を防ぐため、`policyId` には推測不可能なUUIDv4（128bit）を採用しています。このIDはGPOやMDMなどを通じて、社内PCへ安全にサイレント配備されます。
+  version: 1.0.0
+servers:
+  - url: https://kiba-api.zenprax.com
+    description: 本番エンドポイント
+paths:
+  /v1/users/{policyId}/policy.bin:
+    get:
+      summary: 暗号化ポリシーBlob（バイナリ）の取得
+      description: |
+        指定された Policy ID に紐づく、暗号化済みのポリシーファイルを取得します。
+        中身は AES-GCM 256bit で暗号化されたJSONデータであり、適切なBYOK decryptionKey（暗号鍵）がない限り、地球上の誰も解読できません。
+      parameters:
+        - name: policyId
+          in: path
+          required: true
+          description: GPO/MDMまたはローカルに配備された推測不可能なUUIDv4
+          schema:
+            type: string
+            format: uuid
+            example: "8f7c92b4-e21d-4f1a-8c9d-3b5f6a7d8e9f"
+      responses:
+        '200':
+          description: 暗号化ポリシーバイナリ。取得後、拡張機能エッジでローカル復号されます。
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: 指定された Policy ID のファイルが存在しないか、ディレクトリが未作成です。
+        '500':
+          description: オリジンサーバーまたはゲートウェイエラー。
+
+  /v1/users/{policyId}/iv.txt:
+    get:
+      summary: ポリシーBlob復号用のIV（初期化ベクトル）の取得
+      description: |
+        暗号化された `policy.bin` を復号する際に必要となる、12バイトのIV（初期化ベクトル）を取得します。
+        IVは暗号化のたびにランダムに生成され、ここにプレーンなBase64エンコード文字列として格納されます（IV自体は公開されても安全です）。
+      parameters:
+        - name: policyId
+          in: path
+          required: true
+          description: 同一のUUIDv4
+          schema:
+            type: string
+            format: uuid
+            example: "8f7c92b4-e21d-4f1a-8c9d-3b5f6a7d8e9f"
+      responses:
+        '200':
+          description: Base64エンコードされた12バイトのIVテキストデータ。
+          content:
+            text/plain:
+              schema:
+                type: string
+                example: "dGhpcyBpcyBhbiBpdg=="
+        '404':
+          description: 指定された Policy ID のIVファイルが存在しません。
+        '500':
+          description: オリジンサーバーまたはゲートウェイエラー。

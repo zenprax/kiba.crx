@@ -102,6 +102,12 @@ npm test         # Run Vitest unit tests
 - `clipboardRead` / `clipboardWrite` permissions are **not** requested — blocking a
   paste via `preventDefault()` does not require clipboard access.
 
+## API Specification
+
+The endpoints that kiba.crx communicates with are documented publicly for transparency:
+
+- [Kiba Policy Delivery API](https://zenprax.github.io/kiba.crx/docs/) — OpenAPI specification (GitHub Pages)
+
 ## License
 
 Apache 2.0 — see [LICENSE](./LICENSE).

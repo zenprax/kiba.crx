@@ -89,6 +89,12 @@ npm test         # Vitest ユニットテストの実行
 - ファイルアップロードブロックはコンテンツスクリプトの**分離ワールド**で動作します。入力をリセットしてワークフローを制御しますが、元のファイル選択を再現することはできないため、バイパス後にユーザーが再度ファイルを選択する必要があります。これはMVPとして意図した仕様です。
 - `clipboardRead` / `clipboardWrite` 権限は要求しません — `preventDefault()` によるペーストのブロックにクリップボードアクセスは不要です。
 
+## API仕様
+
+kiba.crx が通信するエンドポイントを透明性のために公開しています：
+
+- [Kiba Policy Delivery API](https://zenprax.github.io/kiba.crx/docs/) — OpenAPI仕様（GitHub Pages）
+
 ## ライセンス
 
 Apache 2.0 — [LICENSE](./LICENSE) を参照してください。
