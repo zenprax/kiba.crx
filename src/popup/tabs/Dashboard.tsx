@@ -130,16 +130,16 @@ function CloudSyncCard() {
 
   // 既存の保存値を読み込んでフォームへ反映する。
   useEffect(() => {
-    void chrome.storage.local.get(['customPolicyId', 'customDecryptionKey']).then((v) => {
+    void chrome.storage.local.get(['customPolicyId', 'decryptionKey']).then((v) => {
       if (typeof v.customPolicyId === 'string') setPolicyId(v.customPolicyId);
-      if (typeof v.customDecryptionKey === 'string') setDecryptionKey(v.customDecryptionKey);
+      if (typeof v.decryptionKey === 'string') setDecryptionKey(v.decryptionKey);
     });
   }, []);
 
   async function save() {
     await chrome.storage.local.set({
       customPolicyId: policyId.trim(),
-      customDecryptionKey: decryptionKey.trim(),
+      decryptionKey: decryptionKey.trim(),
     });
     // 保存直後に background へ即時ポリシー同期を要求する。
     await chrome.runtime.sendMessage({ kind: 'kiba:request-sync' });
