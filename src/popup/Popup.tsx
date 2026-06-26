@@ -21,6 +21,8 @@ export function Popup() {
     configured: false,
     count: 0,
   });
+  // chrome.storage.managed（GPO/MDM）に policyId が配備されているか。
+  const [managedByPolicy, setManagedByPolicy] = useState(false);
 
   useEffect(() => {
     void getSettings().then((s) => {
@@ -29,6 +31,18 @@ export function Popup() {
     });
     return onSettingsChanged(setLocalSettings);
   }, []);
+
+  // 管理下判定の真実源 1: managed ストレージの policyId。非対応環境では例外/空。
+  useEffect(() => {
+    void chrome.storage.managed
+      .get(['policyId'])
+      .then((m) => setManagedByPolicy(typeof m.policyId === 'string' && m.policyId.length > 0))
+      .catch(() => setManagedByPolicy(false));
+  }, []);
+
+  // 管理ロックの実効判定: managed ストレージ or compileActiveSettings が立てた
+  // settings.isManaged のいずれか（OR）。
+  const isManaged = managedByPolicy || settings.isManaged;
 
   // 資格情報の同期状態を background（credentialBroker）へ問い合わせる。
   // 資格情報そのものは受け取らず、構成有無と件数のみ取得する。
@@ -106,6 +120,12 @@ export function Popup() {
         <p className="mt-2 text-xs text-emerald-200/70">
           Edge-based browser security. Blocking risks before they hit the wire.
         </p>
+        {/* 組織管理下のロックダウンバッジ（読み取り専用であることを明示）。 */}
+        {isManaged && (
+          <div className="mt-3 flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-[11px] font-semibold text-emerald-300">
+            🔒 Managed by your organization
+          </div>
+        )}
       </header>
 
       {/* Tab navigation (plugin-style: disabled features have no tab) */}
@@ -130,6 +150,7 @@ export function Popup() {
           <Dashboard
             settings={settings}
             loading={loading}
+            isManaged={isManaged}
             blockedCount={blockedCount}
             onToggleAntiClickFix={toggleAntiClickFix}
             onToggleMask={toggleMask}
