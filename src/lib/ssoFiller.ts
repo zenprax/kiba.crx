@@ -97,14 +97,3 @@ export function fillCredentials(doc: Document, cred: SsoCredential): FillResult 
   return { filled: Boolean(userEl), submitted: false, reason: 'no enclosing form to submit' };
 }
 
-/**
- * Heuristic DevTools-open detector for the MVP. A docked DevTools panel shrinks
- * the viewport relative to the outer window; a large gap suggests it is open.
- * This is best-effort only (undockable/standalone DevTools evade detection) and
- * exists to demonstrate the "halt autofill when inspected" policy.
- */
-export function isDevToolsLikelyOpen(win: Window): boolean {
-  const widthGap = win.outerWidth - win.innerWidth;
-  const heightGap = win.outerHeight - win.innerHeight;
-  return widthGap > 200 || heightGap > 200;
-}

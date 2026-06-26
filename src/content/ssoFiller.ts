@@ -12,7 +12,6 @@
 
 import {
   fillCredentials,
-  isDevToolsLikelyOpen,
   type FillResult,
 } from '../lib/ssoFiller';
 import { addAuditLog } from '../lib/storage';
@@ -20,10 +19,6 @@ import type { KibaSettings, SsoCredential } from '../types';
 
 /** How long to keep watching for a (possibly SPA-rendered) password field. */
 const OBSERVE_TIMEOUT_MS = 8000;
-
-function notify(title: string, message: string): void {
-  chrome.runtime.sendMessage({ kind: 'kiba:notify', title, message });
-}
 
 /** True when the current document already exposes a password field to fill. */
 function hasLoginForm(): boolean {
@@ -48,14 +43,6 @@ export async function initSsoHandler(getSettings: () => KibaSettings | null): Pr
   const settings = getSettings();
   // Only proceed when the feature is enabled.
   if (!settings || !settings.ssoEnabled) return;
-
-  // DevTools-open policy: halt autofill so the password is never injected while
-  // someone is inspecting the DOM. 資格情報を取得する前にチェックする。
-  if (isDevToolsLikelyOpen(window)) {
-    notify('kiba.crx', 'SSO autofill halted: developer tools appear to be open.');
-    void addAuditLog('sso-fill', 'SSO autofill blocked (DevTools detected)', window.location.hostname);
-    return;
-  }
 
   const cred = await requestCredential(window.location.href);
   if (!cred) return;

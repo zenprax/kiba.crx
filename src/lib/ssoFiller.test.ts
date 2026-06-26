@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SsoCredential } from '../types';
-import { isDevToolsLikelyOpen, matchCredential } from './ssoFiller';
+import { matchCredential } from './ssoFiller';
 
 const creds: SsoCredential[] = [
   {
@@ -37,28 +37,5 @@ describe('matchCredential', () => {
       { urlMatch: '', username: 'x', password: 'y', autoSubmit: false },
     ];
     expect(matchCredential('https://anything', withEmpty)).toBeNull();
-  });
-});
-
-describe('isDevToolsLikelyOpen', () => {
-  function fakeWindow(outer: { w: number; h: number }, inner: { w: number; h: number }): Window {
-    return {
-      outerWidth: outer.w,
-      outerHeight: outer.h,
-      innerWidth: inner.w,
-      innerHeight: inner.h,
-    } as Window;
-  }
-
-  it('returns false when inner ~ outer (no devtools)', () => {
-    expect(isDevToolsLikelyOpen(fakeWindow({ w: 1280, h: 800 }, { w: 1280, h: 784 }))).toBe(false);
-  });
-
-  it('detects a wide gap on width (side-docked devtools)', () => {
-    expect(isDevToolsLikelyOpen(fakeWindow({ w: 1280, h: 800 }, { w: 900, h: 784 }))).toBe(true);
-  });
-
-  it('detects a wide gap on height (bottom-docked devtools)', () => {
-    expect(isDevToolsLikelyOpen(fakeWindow({ w: 1280, h: 800 }, { w: 1280, h: 500 }))).toBe(true);
   });
 });
