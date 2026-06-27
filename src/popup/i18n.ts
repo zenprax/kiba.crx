@@ -6,6 +6,8 @@ export const JA: Translations = {
   status: { protected: '保護中', paused: '一時停止中' },
   tabs: {
     dashboard: 'ダッシュボード',
+    filter: 'フィルター',
+    antiClickFix: 'Anti-ClickFix',
     sso: 'SSO',
     audit: '監査ログ',
     settings: '設定',
@@ -62,13 +64,41 @@ export const JA: Translations = {
     removeAriaLabel: 'エントリを削除',
     managedNote: '組織ポリシーにより読み取り専用です。',
   },
+  filter: {
+    title: 'Threat Intelligence Filter',
+    blockTitle: 'ブロックドメイン',
+    blockDesc: '指定したドメインへのリクエストをブロックします。',
+    blockPlaceholder: 'evil.com',
+    allowTitle: '除外ドメイン（ホワイトリスト）',
+    allowDesc: 'ブロックルールから除外するドメインを登録します。',
+    allowPlaceholder: 'trusted.example.com',
+    addButton: '追加',
+    removeAriaLabel: 'エントリを削除',
+    managedNote: '組織ポリシーにより読み取り専用です。',
+    noEntries: '未登録',
+    domainLabel: 'ドメイン',
+  },
+  antiClickFix: {
+    title: 'Anti-ClickFix 検知パターン',
+    desc: '以下のパターンを含む貼り付けテキストはブロックされます。これらのパターンはシステムに組み込まれており変更できません。',
+    patterns: [
+      'PowerShell / pwsh',
+      'cmd.exe / mshta',
+      'Invoke-WebRequest',
+      'Invoke-Expression / iex()',
+      'curl … | sh/bash',
+      'wget … | sh/bash',
+      'bash -c',
+      '/bin/bash / /bin/sh',
+    ],
+  },
   managed: '組織のポリシーで管理されています',
   managedTooltip: '管理者ポリシーにより設定は読み取り専用です。',
 } as const;
 
 export type Translations = {
   status: { protected: string; paused: string };
-  tabs: { dashboard: string; sso: string; audit: string; settings: string };
+  tabs: { dashboard: string; filter: string; antiClickFix: string; sso: string; audit: string; settings: string };
   dashboard: {
     itemsBlocked: string;
     bypass: string;
@@ -99,6 +129,25 @@ export type Translations = {
     countSynced: (n: number) => string;
   };
   audit: { title: string; events: string; noEvents: string };
+  filter: {
+    title: string;
+    blockTitle: string;
+    blockDesc: string;
+    blockPlaceholder: string;
+    allowTitle: string;
+    allowDesc: string;
+    allowPlaceholder: string;
+    addButton: string;
+    removeAriaLabel: string;
+    managedNote: string;
+    noEntries: string;
+    domainLabel: string;
+  };
+  antiClickFix: {
+    title: string;
+    desc: string;
+    patterns: string[];
+  };
   tenantManager: {
     title: string;
     addButton: string;
@@ -125,6 +174,8 @@ export const EN: Translations = {
   status: { protected: 'Protected', paused: 'Paused' },
   tabs: {
     dashboard: 'Dashboard',
+    filter: 'Filter',
+    antiClickFix: 'Anti-ClickFix',
     sso: 'SSO',
     audit: 'Audit',
     settings: 'Settings',
@@ -183,6 +234,34 @@ export const EN: Translations = {
     labelPlaceholder: 'e.g. My Slack',
     removeAriaLabel: 'Remove entry',
     managedNote: 'Read-only under organization policy.',
+  },
+  filter: {
+    title: 'Threat Intelligence Filter',
+    blockTitle: 'Block Domains',
+    blockDesc: 'Requests to these domains will be blocked.',
+    blockPlaceholder: 'evil.com',
+    allowTitle: 'Allowlist (Exceptions)',
+    allowDesc: 'Domains exempted from all block rules.',
+    allowPlaceholder: 'trusted.example.com',
+    addButton: 'Add',
+    removeAriaLabel: 'Remove entry',
+    managedNote: 'Read-only under organization policy.',
+    noEntries: 'None configured',
+    domainLabel: 'Domain',
+  },
+  antiClickFix: {
+    title: 'Anti-ClickFix Detection Patterns',
+    desc: 'Paste text matching any of the following patterns is blocked. These patterns are built-in and cannot be modified.',
+    patterns: [
+      'PowerShell / pwsh',
+      'cmd.exe / mshta',
+      'Invoke-WebRequest',
+      'Invoke-Expression / iex()',
+      'curl … | sh/bash',
+      'wget … | sh/bash',
+      'bash -c',
+      '/bin/bash / /bin/sh',
+    ],
   },
   managed: 'Managed by your organization',
   managedTooltip: 'Settings are enforced by an administrator policy and are read-only on this device.',

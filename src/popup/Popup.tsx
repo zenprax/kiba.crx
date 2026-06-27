@@ -5,6 +5,8 @@ import { Lock } from 'lucide-react';
 import { type TabId, type TenantWhitelistEntry } from '../types';
 import { useKibaSettings, useManagedPolicy, useCredentialStatus } from './hooks';
 import { Dashboard } from './tabs/Dashboard';
+import { FilterTab } from './tabs/FilterTab';
+import { AntiClickFixTab } from './tabs/AntiClickFixTab';
 import { SsoList } from './tabs/SsoList';
 import { AuditLog } from './tabs/AuditLog';
 import { Settings } from './tabs/Settings';
@@ -29,10 +31,12 @@ export function Popup() {
 
   const tabs = useMemo<{ id: TabId; label: string }[]>(() => {
     const all: { id: TabId; label: string }[] = [
-      { id: 'dashboard', label: t.tabs.dashboard },
-      { id: 'sso',       label: t.tabs.sso },
-      { id: 'audit',     label: t.tabs.audit },
-      { id: 'settings',  label: t.tabs.settings },
+      { id: 'dashboard',     label: t.tabs.dashboard },
+      { id: 'filter',        label: t.tabs.filter },
+      { id: 'anti-clickfix', label: t.tabs.antiClickFix },
+      { id: 'sso',           label: t.tabs.sso },
+      { id: 'audit',         label: t.tabs.audit },
+      { id: 'settings',      label: t.tabs.settings },
     ];
     return all.filter((tab) => !settings.hiddenTabs.includes(tab.id));
   }, [settings.hiddenTabs, t]);
@@ -152,6 +156,14 @@ export function Popup() {
             onGrantBypass={grantBypass}
           />
         )}
+        {activeTab === 'filter' && (
+          <FilterTab
+            settings={settings}
+            isManaged={isManaged}
+            onUpdateSettings={updateSettings}
+          />
+        )}
+        {activeTab === 'anti-clickfix' && <AntiClickFixTab />}
         {activeTab === 'sso' && (
           <SsoList configured={credStatus.configured} count={credStatus.count} />
         )}

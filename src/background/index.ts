@@ -134,6 +134,49 @@ async function applyNetworkFilterState(enabled: boolean): Promise<void> {
 
 void getSettings().then((s) => applyNetworkFilterState(s.networkFilterEnabled));
 
+// Sync user-defined block/allowlist domains to dynamic declarativeNetRequest rules.
+// Block rules use IDs starting at 10000; allow rules use IDs starting at 20000.
+const BLOCK_RULE_BASE_ID = 10000;
+const ALLOW_RULE_BASE_ID = 20000;
+
+async function applyDynamicDomainRules(
+  blockDomains: string[],
+  allowlist: string[],
+): Promise<void> {
+  const existing = await chrome.declarativeNetRequest.getDynamicRules();
+  const removeRuleIds = existing.map((r) => r.id);
+
+  const resourceTypes: chrome.declarativeNetRequest.ResourceType[] = [
+    chrome.declarativeNetRequest.ResourceType.MAIN_FRAME,
+    chrome.declarativeNetRequest.ResourceType.SUB_FRAME,
+    chrome.declarativeNetRequest.ResourceType.SCRIPT,
+    chrome.declarativeNetRequest.ResourceType.XMLHTTPREQUEST,
+    chrome.declarativeNetRequest.ResourceType.IMAGE,
+  ];
+
+  const addRules: chrome.declarativeNetRequest.Rule[] = [
+    ...blockDomains.map((domain, i) => ({
+      id: BLOCK_RULE_BASE_ID + i,
+      priority: 1,
+      action: { type: chrome.declarativeNetRequest.RuleActionType.BLOCK },
+      condition: { urlFilter: `*${domain}*`, resourceTypes },
+    })),
+    ...allowlist.map((domain, i) => ({
+      id: ALLOW_RULE_BASE_ID + i,
+      priority: 10,
+      action: { type: chrome.declarativeNetRequest.RuleActionType.ALLOW },
+      condition: { urlFilter: `*${domain}*`, resourceTypes },
+    })),
+  ];
+
+  await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds, addRules });
+}
+
+void getSettings().then((s) =>
+  applyDynamicDomainRules(s.userBlockDomains, s.filterAllowlist),
+);
+
 onSettingsChanged((s) => {
   void applyNetworkFilterState(s.networkFilterEnabled);
+  void applyDynamicDomainRules(s.userBlockDomains, s.filterAllowlist);
 });
