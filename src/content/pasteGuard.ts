@@ -18,6 +18,8 @@ import { isDryRun, tagDetail } from '../lib/dryRun';
 import {
   describeMask,
   describePasteThreat,
+  getActiveDangerPatterns,
+  getActiveSecretPatterns,
   isDangerousPaste,
   sanitizePaste,
 } from '../lib/patterns';
@@ -45,7 +47,8 @@ export function initPasteGuard(getSettings: () => KibaSettings | null): () => vo
     const selectedText = window.getSelection()?.toString() ?? '';
 
     // Stage 1: dangerous OS commands are always fully blocked.
-    if (isDangerousPaste(selectedText)) {
+    // 組み込み + OTA カスタムの危険パターンで照合する。
+    if (isDangerousPaste(selectedText, getActiveDangerPatterns(settings))) {
       const detail = tagDetail(describePasteThreat(selectedText), dryRun);
       if (dryRun) {
         void addAuditLog('paste-block', detail, HOSTNAME);
@@ -66,7 +69,7 @@ export function initPasteGuard(getSettings: () => KibaSettings | null): () => vo
     const maskEnabled = settings?.maskEnabled ?? true;
     if (!maskEnabled || !isRestrictedContext(settings)) return;
 
-    const result = sanitizePaste(selectedText);
+    const result = sanitizePaste(selectedText, getActiveSecretPatterns(settings));
     if (!result.masked) return;
 
     const detail = tagDetail(describeMask(result), dryRun);

@@ -3,6 +3,8 @@ import {
   MASK_TOKEN,
   describeMask,
   describePasteThreat,
+  getActiveDangerPatterns,
+  getActiveSecretPatterns,
   isDangerousPaste,
   sanitizePaste,
 } from './patterns';
@@ -106,5 +108,46 @@ describe('describeMask', () => {
 
   it('reports nothing masked', () => {
     expect(describeMask(sanitizePaste('hello'))).toBe('No confidential data masked');
+  });
+});
+
+describe('getActiveDangerPatterns (OTA)', () => {
+  it('settings 無しなら組み込み既定のみ', () => {
+    expect(getActiveDangerPatterns()).toHaveLength(1);
+    expect(getActiveDangerPatterns(null)).toHaveLength(1);
+  });
+
+  it('検証を通ったカスタム danger を追加し、照合に反映する', () => {
+    const settings = { customPatterns: { danger: ['secret-loader\\.exe'] } };
+    const patterns = getActiveDangerPatterns(settings);
+    expect(patterns).toHaveLength(2);
+    // 組み込みでは引っかからないがカスタムで検知される。
+    expect(isDangerousPaste('run secret-loader.exe now', patterns)).toBe(true);
+    expect(isDangerousPaste('run secret-loader.exe now')).toBe(false); // 既定のみ
+  });
+
+  it('ReDoS など危険なカスタムパターンは黙って無視する', () => {
+    const settings = { customPatterns: { danger: ['(a+)+', 'valid-pat'] } };
+    const patterns = getActiveDangerPatterns(settings);
+    // (a+)+ は弾かれ valid-pat だけ追加 → 組み込み + 1。
+    expect(patterns).toHaveLength(2);
+  });
+});
+
+describe('getActiveSecretPatterns (OTA)', () => {
+  it('settings 無しなら組み込み既定のみ', () => {
+    expect(getActiveSecretPatterns()).toHaveLength(3);
+  });
+
+  it('カスタム secret を追加し、マスクに反映する', () => {
+    const settings = {
+      customPatterns: { secrets: [{ label: 'Slack Token', pattern: 'xoxb-[0-9A-Za-z-]+' }] },
+    };
+    const patterns = getActiveSecretPatterns(settings);
+    expect(patterns).toHaveLength(4);
+    const result = sanitizePaste('token xoxb-123-abc here', patterns);
+    expect(result.masked).toBe(true);
+    expect(result.matchedLabels).toContain('Slack Token');
+    expect(result.sanitized).toBe(`token ${MASK_TOKEN} here`);
   });
 });

@@ -163,7 +163,7 @@ export function Popup() {
             onUpdateSettings={updateSettings}
           />
         )}
-        {activeTab === 'anti-clickfix' && <AntiClickFixTab />}
+        {activeTab === 'anti-clickfix' && <AntiClickFixTab settings={settings} />}
         {activeTab === 'sso' && (
           <SsoList configured={credStatus.configured} count={credStatus.count} />
         )}
