@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import {
-  DEFAULT_SETTINGS,
-  type KibaSettings,
-  type TenantWhitelistEntry,
-} from '../types';
-import { getSettings, onSettingsChanged, setSettings } from '../lib/storage';
+import * as Switch from '@radix-ui/react-switch';
+import * as Tooltip from '@radix-ui/react-tooltip';
+import { Lock } from 'lucide-react';
+import { type TenantWhitelistEntry } from '../types';
+import { useKibaSettings, useManagedPolicy, useCredentialStatus } from './hooks';
 import { Dashboard } from './tabs/Dashboard';
 import { SsoList } from './tabs/SsoList';
 import { AuditLog } from './tabs/AuditLog';
@@ -14,45 +13,16 @@ type TabId = 'dashboard' | 'sso' | 'audit';
 
 /** Admin/User local dashboard for kiba.crx. */
 export function Popup() {
-  const [settings, setLocalSettings] = useState<KibaSettings>(DEFAULT_SETTINGS);
-  const [loading, setLoading] = useState(true);
+  const { settings, loading, updateSettings } = useKibaSettings();
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
-  const [credStatus, setCredStatus] = useState<{ configured: boolean; count: number }>({
-    configured: false,
-    count: 0,
-  });
   // chrome.storage.managed（GPO/MDM）に policyId が配備されているか。
-  const [managedByPolicy, setManagedByPolicy] = useState(false);
-
-  useEffect(() => {
-    void getSettings().then((s) => {
-      setLocalSettings(s);
-      setLoading(false);
-    });
-    return onSettingsChanged(setLocalSettings);
-  }, []);
-
-  // 管理下判定の真実源 1: managed ストレージの policyId。非対応環境では例外/空。
-  useEffect(() => {
-    void chrome.storage.managed
-      .get(['policyId'])
-      .then((m) => setManagedByPolicy(typeof m.policyId === 'string' && m.policyId.length > 0))
-      .catch(() => setManagedByPolicy(false));
-  }, []);
+  const managedByPolicy = useManagedPolicy();
+  // 資格情報の同期状態（構成有無・件数のみ。資格情報そのものは受け取らない）。
+  const credStatus = useCredentialStatus(settings.ssoEnabled);
 
   // 管理ロックの実効判定: managed ストレージ or compileActiveSettings が立てた
   // settings.isManaged のいずれか（OR）。
   const isManaged = managedByPolicy || settings.isManaged;
-
-  // 資格情報の同期状態を background（credentialBroker）へ問い合わせる。
-  // 資格情報そのものは受け取らず、構成有無と件数のみ取得する。
-  useEffect(() => {
-    void chrome.runtime
-      .sendMessage({ kind: 'kiba:credential-status' })
-      .then((res: { configured: boolean; count: number } | undefined) => {
-        if (res) setCredStatus(res);
-      });
-  }, [settings.ssoEnabled]);
 
   const blockedCount = useMemo(
     () =>
@@ -74,15 +44,15 @@ export function Popup() {
   }, [tabs, activeTab]);
 
   async function toggleAntiClickFix() {
-    setLocalSettings(await setSettings({ antiClickFixEnabled: !settings.antiClickFixEnabled }));
+    await updateSettings({ antiClickFixEnabled: !settings.antiClickFixEnabled });
   }
 
   async function toggleMask() {
-    setLocalSettings(await setSettings({ maskEnabled: !settings.maskEnabled }));
+    await updateSettings({ maskEnabled: !settings.maskEnabled });
   }
 
   async function toggleSso() {
-    setLocalSettings(await setSettings({ ssoEnabled: !settings.ssoEnabled }));
+    await updateSettings({ ssoEnabled: !settings.ssoEnabled });
   }
 
   async function grantBypass() {
@@ -97,6 +67,7 @@ export function Popup() {
   const isDryRun = settings.mode === 'DRY_RUN';
 
   return (
+    <Tooltip.Provider delayDuration={200}>
     <div className="min-h-[480px] bg-zenprax-950 text-emerald-50 font-sans">
       {/* Status header */}
       <header className="px-5 pt-5 pb-4 bg-gradient-to-br from-zenprax-900 to-zenprax-800 border-b border-emerald-500/20">
@@ -122,9 +93,25 @@ export function Popup() {
         </p>
         {/* 組織管理下のロックダウンバッジ（読み取り専用であることを明示）。 */}
         {isManaged && (
-          <div className="mt-3 flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-[11px] font-semibold text-emerald-300">
-            🔒 Managed by your organization
-          </div>
+          <Tooltip.Root>
+            <Tooltip.Trigger asChild>
+              <div className="mt-3 flex cursor-default items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-[11px] font-semibold text-emerald-300">
+                <Lock className="h-3.5 w-3.5" aria-hidden />
+                Managed by your organization
+              </div>
+            </Tooltip.Trigger>
+            <Tooltip.Portal>
+              <Tooltip.Content
+                side="bottom"
+                sideOffset={6}
+                className="max-w-[280px] rounded-lg border border-emerald-500/20 bg-zenprax-900 px-3 py-2 text-[11px] text-emerald-100 shadow-xl"
+              >
+                Settings are enforced by an administrator policy and are read-only
+                on this device.
+                <Tooltip.Arrow className="fill-zenprax-900" />
+              </Tooltip.Content>
+            </Tooltip.Portal>
+          </Tooltip.Root>
         )}
       </header>
 
@@ -164,6 +151,7 @@ export function Popup() {
         {activeTab === 'audit' && <AuditLog entries={settings.auditLog} />}
       </main>
     </div>
+    </Tooltip.Provider>
   );
 }
 
@@ -214,27 +202,26 @@ export function Toggle({
   checked,
   disabled,
   onChange,
+  label,
 }: {
   checked: boolean;
   disabled?: boolean;
   onChange: () => void;
+  /** スクリーンリーダ向けのアクセシブルラベル（視覚ラベルが別要素のとき）。 */
+  label?: string;
 }) {
+  // a11y（キーボード操作・role/aria-checked）は Radix に委譲し、見た目は従来の
+  // Tailwind 配色・サム移動を data-[state] セレクタで再現する。
   return (
-    <button
-      role="switch"
-      aria-checked={checked}
+    <Switch.Root
+      checked={checked}
       disabled={disabled}
-      onClick={onChange}
-      className={`relative h-6 w-11 shrink-0 rounded-full transition disabled:opacity-50 ${
-        checked ? 'bg-emerald-500' : 'bg-slate-600'
-      }`}
+      onCheckedChange={onChange}
+      aria-label={label}
+      className="relative h-6 w-11 shrink-0 rounded-full bg-slate-600 transition data-[state=checked]:bg-emerald-500 disabled:opacity-50"
     >
-      <span
-        className={`absolute top-0.5 h-5 w-5 rounded-full bg-white transition-all ${
-          checked ? 'left-[22px]' : 'left-0.5'
-        }`}
-      />
-    </button>
+      <Switch.Thumb className="block h-5 w-5 translate-x-0.5 rounded-full bg-white transition-transform data-[state=checked]:translate-x-[22px]" />
+    </Switch.Root>
   );
 }
 

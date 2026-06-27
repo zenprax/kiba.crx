@@ -1,3 +1,13 @@
+import {
+  ClipboardX,
+  FileX2,
+  Unlock,
+  EyeOff,
+  KeyRound,
+  Building2,
+  Puzzle,
+  type LucideIcon,
+} from 'lucide-react';
 import type { AuditEventType, AuditLogEntry } from '../../types';
 import { Card } from '../Popup';
 
@@ -10,6 +20,17 @@ const EVENT_LABEL: Record<AuditEventType, string> = {
   'sso-fill': 'SSO',
   'tenant-block': 'TENANT',
   'extension-audit': 'EXT',
+};
+
+/** Icon per audit event type for at-a-glance scanning. */
+const EVENT_ICON: Record<AuditEventType, LucideIcon> = {
+  'paste-block': ClipboardX,
+  'file-block': FileX2,
+  'bypass-grant': Unlock,
+  'paste-mask': EyeOff,
+  'sso-fill': KeyRound,
+  'tenant-block': Building2,
+  'extension-audit': Puzzle,
 };
 
 /** Badge color classes per audit event type. */
@@ -38,14 +59,17 @@ export function AuditLog({ entries }: { entries: AuditLogEntry[] }) {
           </div>
         ) : (
           <ul className="mt-2 max-h-72 space-y-1.5 overflow-y-auto pr-1">
-            {entries.map((e, i) => (
+            {entries.map((e, i) => {
+              const Icon = EVENT_ICON[e.type];
+              return (
               <li
                 key={`${e.ts}-${i}`}
                 className="flex items-start gap-2 rounded-lg bg-zenprax-950/60 px-2.5 py-2 text-xs"
               >
                 <span
-                  className={`mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold ${EVENT_COLOR[e.type]}`}
+                  className={`mt-0.5 flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold ${EVENT_COLOR[e.type]}`}
                 >
+                  <Icon className="h-3 w-3" aria-hidden />
                   {EVENT_LABEL[e.type]}
                 </span>
                 <div className="min-w-0">
@@ -55,7 +79,8 @@ export function AuditLog({ entries }: { entries: AuditLogEntry[] }) {
                   </div>
                 </div>
               </li>
-            ))}
+              );
+            })}
           </ul>
         )}
       </Card>

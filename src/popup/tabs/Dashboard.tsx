@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { MousePointerClick, EyeOff, KeyRound, Building2, Upload, Cloud } from 'lucide-react';
 import type { KibaSettings } from '../../types';
 import { Card, StatCard, Toggle, TenantList } from '../Popup';
 
@@ -43,16 +44,20 @@ export function Dashboard({
       {/* Anti-ClickFix toggle */}
       <Card>
         <div className="flex items-center justify-between">
-          <div>
-            <div className="text-sm font-semibold">Anti-ClickFix</div>
-            <div className="text-xs text-emerald-200/60">
-              Block dangerous OS-command pastes
+          <div className="flex items-center gap-2.5">
+            <MousePointerClick className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden />
+            <div>
+              <div className="text-sm font-semibold">Anti-ClickFix</div>
+              <div className="text-xs text-emerald-200/60">
+                Block dangerous OS-command pastes
+              </div>
             </div>
           </div>
           <Toggle
             checked={settings.antiClickFixEnabled}
             disabled={locked}
             onChange={onToggleAntiClickFix}
+            label="Anti-ClickFix"
           />
         </div>
       </Card>
@@ -60,33 +65,52 @@ export function Dashboard({
       {/* Paste masking toggle */}
       <Card>
         <div className="flex items-center justify-between">
-          <div>
-            <div className="text-sm font-semibold">Confidential Masking</div>
-            <div className="text-xs text-emerald-200/60">
-              Mask secrets on foreign-tenant pastes
+          <div className="flex items-center gap-2.5">
+            <EyeOff className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden />
+            <div>
+              <div className="text-sm font-semibold">Confidential Masking</div>
+              <div className="text-xs text-emerald-200/60">
+                Mask secrets on foreign-tenant pastes
+              </div>
             </div>
           </div>
-          <Toggle checked={settings.maskEnabled} disabled={locked} onChange={onToggleMask} />
+          <Toggle
+            checked={settings.maskEnabled}
+            disabled={locked}
+            onChange={onToggleMask}
+            label="Confidential Masking"
+          />
         </div>
       </Card>
 
       {/* Pseudo-SSO toggle (credential list lives in the SSO tab) */}
       <Card>
         <div className="flex items-center justify-between">
-          <div>
-            <div className="text-sm font-semibold">Pseudo-SSO Autofill</div>
-            <div className="text-xs text-emerald-200/60">
-              Hidden autofill for shared accounts
+          <div className="flex items-center gap-2.5">
+            <KeyRound className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden />
+            <div>
+              <div className="text-sm font-semibold">Pseudo-SSO Autofill</div>
+              <div className="text-xs text-emerald-200/60">
+                Hidden autofill for shared accounts
+              </div>
             </div>
           </div>
-          <Toggle checked={settings.ssoEnabled} disabled={locked} onChange={onToggleSso} />
+          <Toggle
+            checked={settings.ssoEnabled}
+            disabled={locked}
+            onChange={onToggleSso}
+            label="Pseudo-SSO Autofill"
+          />
         </div>
       </Card>
 
       {/* Trusted tenant whitelist (read-only) */}
       <Card>
         <div className="flex items-center justify-between">
-          <div className="text-sm font-semibold">Trusted Tenants</div>
+          <div className="flex items-center gap-2">
+            <Building2 className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden />
+            <div className="text-sm font-semibold">Trusted Tenants</div>
+          </div>
           <span className="text-[11px] text-emerald-200/50">
             {settings.tenantWhitelist.length} entries
           </span>
@@ -96,7 +120,10 @@ export function Dashboard({
 
       {/* One-Time Bypass control */}
       <Card>
-        <div className="text-sm font-semibold">One-Time Upload Bypass</div>
+        <div className="flex items-center gap-2">
+          <Upload className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden />
+          <div className="text-sm font-semibold">One-Time Upload Bypass</div>
+        </div>
         <div className="mt-1 text-xs text-emerald-200/60">
           Request a single-use upload exception for restricted domains. Approval
           is mediated by the admin console.
@@ -149,7 +176,10 @@ function CloudSyncCard() {
 
   return (
     <Card>
-      <div className="text-sm font-semibold">クラウド同期設定</div>
+      <div className="flex items-center gap-2">
+        <Cloud className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden />
+        <div className="text-sm font-semibold">クラウド同期設定</div>
+      </div>
       <div className="mt-1 text-xs text-emerald-200/60">
         Zenprax Cloud で発行された Policy ID と復号鍵（BYOK）を入力して同期します。
       </div>

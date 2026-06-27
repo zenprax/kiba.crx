@@ -1,3 +1,4 @@
+import { KeyRound } from 'lucide-react';
 import { Card } from '../Popup';
 
 /** SsoList の props。資格情報そのものは popup へ渡さず、状態のみ表示する。 */
@@ -20,7 +21,10 @@ export function SsoList({ configured, count }: SsoListProps) {
     <div className="space-y-3">
       <Card>
         <div className="flex items-center justify-between">
-          <div className="text-sm font-semibold">Shared Credentials</div>
+          <div className="flex items-center gap-2">
+            <KeyRound className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden />
+            <div className="text-sm font-semibold">Shared Credentials</div>
+          </div>
           <span className="text-[11px] text-emerald-200/50">{count} synced</span>
         </div>
         <p className="mt-1 text-xs text-emerald-200/60">
