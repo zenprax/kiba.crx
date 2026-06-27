@@ -2,8 +2,13 @@
  * kiba.crx の注入オーバーレイ／ファイルバイパスモーダル用スタイル。
  *
  * これらは Shadow Root 内に <style> として注入されるため、ホストページの CSS とは
- * 完全に隔離される（こちらのスタイルもホストページへ漏れない）。値は明示的に指定し、
- * 高い z-index と組み合わせてホストページの CSS に依存せず一貫して描画する。
+ * 完全に隔離される（こちらのスタイルもホストページへ漏れない）。
+ *
+ * 色・影・余白・角丸・フォントサイズはすべて @zenprax/design-tokens 由来の CSS
+ * カスタムプロパティ（`--zp-*`）を参照する。これらの変数は overlay.tsx が
+ * `cssVariables('dark', ':host')` と `getTheme('dark')` から組み立てて :host へ
+ * 注入する。ここに生の色コード・生の rgba・生のサイズ値は書かない
+ * （唯一の例外は「器」の最大幅 min(420px, 90vw)）。
  * Tailwind は意図的に使わない（ホストページはこちらの Tailwind ビルドを読み込まない）。
  */
 export const OVERLAY_CSS = `
@@ -14,7 +19,7 @@ export const OVERLAY_CSS = `
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(2, 18, 12, 0.55);
+  background: var(--zp-overlay-scrim);
   backdrop-filter: blur(2px);
   font-family: Inter, system-ui, -apple-system, sans-serif;
   animation: kiba-fade-in 120ms ease-out;
@@ -22,74 +27,74 @@ export const OVERLAY_CSS = `
 
 .kiba-card {
   width: min(420px, 90vw);
-  background: #04231a;
-  color: #e6fffa;
-  border-radius: 14px;
-  border: 1px solid rgba(16, 185, 129, 0.35);
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.55);
-  padding: 22px 24px;
+  background: var(--zp-bg-surface);
+  color: var(--zp-text-primary);
+  border-radius: var(--zp-radius-card);
+  border: 1px solid var(--zp-border-default);
+  box-shadow: var(--zp-shadow-card);
+  padding: var(--zp-space-card-y) var(--zp-space-card-x);
   animation: kiba-pop-in 140ms ease-out;
 }
 
 .kiba-card--danger {
-  border-color: rgba(248, 113, 113, 0.55);
+  border-color: var(--zp-severity-critical-border);
 }
 
 .kiba-card__badge {
   display: inline-block;
-  font-size: 11px;
+  font-size: var(--zp-fs-badge);
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #34d399;
-  background: rgba(16, 185, 129, 0.12);
-  border-radius: 999px;
-  padding: 3px 10px;
-  margin-bottom: 12px;
+  color: var(--zp-brand-primary);
+  background: var(--zp-brand-muted);
+  border-radius: var(--zp-radius-badge);
+  padding: var(--zp-space-badge-y) var(--zp-space-badge-x);
+  margin-bottom: var(--zp-space-title-gap);
 }
 
 .kiba-card--danger .kiba-card__badge {
-  color: #fca5a5;
-  background: rgba(248, 113, 113, 0.12);
+  color: var(--zp-severity-critical-text);
+  background: var(--zp-severity-critical-bg);
 }
 
 .kiba-card__title {
-  margin: 0 0 8px;
-  font-size: 18px;
+  margin: 0 0 var(--zp-space-title-gap);
+  font-size: var(--zp-fs-title);
   font-weight: 700;
   line-height: 1.3;
 }
 
 .kiba-card__body {
-  margin: 0 0 18px;
-  font-size: 14px;
+  margin: 0 0 var(--zp-space-body-gap);
+  font-size: var(--zp-fs-body);
   line-height: 1.5;
-  color: #b7e4d4;
+  color: var(--zp-text-secondary);
 }
 
 .kiba-card__body strong {
-  color: #e6fffa;
+  color: var(--zp-text-primary);
 }
 
 .kiba-card__actions {
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
+  gap: var(--zp-space-actions-gap);
 }
 
 .kiba-btn {
-  font-size: 13px;
+  font-size: var(--zp-fs-btn);
   font-weight: 600;
-  border-radius: 8px;
-  padding: 9px 16px;
+  border-radius: var(--zp-radius-btn);
+  padding: var(--zp-space-btn-y) var(--zp-space-btn-x);
   cursor: pointer;
   border: 1px solid transparent;
   transition: filter 120ms ease, background 120ms ease;
 }
 
 .kiba-btn--primary {
-  background: #10b981;
-  color: #02120c;
+  background: var(--zp-brand-primary);
+  color: var(--zp-text-on-brand);
 }
 
 .kiba-btn--primary:hover {
@@ -98,12 +103,12 @@ export const OVERLAY_CSS = `
 
 .kiba-btn--ghost {
   background: transparent;
-  color: #b7e4d4;
-  border-color: rgba(16, 185, 129, 0.3);
+  color: var(--zp-text-secondary);
+  border-color: var(--zp-border-default);
 }
 
 .kiba-btn--ghost:hover {
-  background: rgba(16, 185, 129, 0.08);
+  background: var(--zp-interactive-hover);
 }
 
 @keyframes kiba-fade-in {

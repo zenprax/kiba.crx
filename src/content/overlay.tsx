@@ -12,7 +12,54 @@
 
 import { StrictMode, type ReactNode } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
+import { cssVariables, getTheme } from '@zenprax/design-tokens';
 import { OVERLAY_CSS } from './overlayStyles';
+
+/**
+ * Shadow Root に注入する CSS カスタムプロパティを構築する。
+ *
+ * 色トークンは `cssVariables('dark', ':host')` がそのまま `--zp-*` を生成する。
+ * 影・余白・角丸・フォントサイズは色変数に含まれないため、`getTheme('dark')` の
+ * Primitive/Semantic 値を overlay 用の `--zp-*` 変数として追記する。これにより
+ * overlayStyles.ts 側に生の色・サイズ値を一切持たせず、すべてトークン由来にする。
+ */
+function buildHostVariables(): string {
+  const theme = getTheme('dark');
+  // 暗幕（scrim）はベース背景を半透明にしたもの。生 rgba を書かず base 色から合成する。
+  const scrim = hexToRgba(theme.color.bg.base, 0.55);
+
+  const extra = [
+    `--zp-overlay-scrim: ${scrim};`,
+    `--zp-shadow-card: ${theme.shadow.lg};`,
+    `--zp-radius-card: ${theme.radius.xl};`,
+    `--zp-radius-badge: ${theme.radius.full};`,
+    `--zp-radius-btn: ${theme.radius.md};`,
+    `--zp-space-card-y: ${theme.spacing['5']};`,
+    `--zp-space-card-x: ${theme.spacing['5']};`,
+    `--zp-space-btn-y: ${theme.spacing['2']};`,
+    `--zp-space-btn-x: ${theme.spacing['4']};`,
+    `--zp-space-badge-y: ${theme.spacing['1']};`,
+    `--zp-space-badge-x: ${theme.spacing['3']};`,
+    `--zp-space-actions-gap: ${theme.spacing['3']};`,
+    `--zp-space-title-gap: ${theme.spacing['2']};`,
+    `--zp-space-body-gap: ${theme.spacing['5']};`,
+    `--zp-fs-badge: ${theme.font.size.sm};`,
+    `--zp-fs-title: ${theme.font.size.xl};`,
+    `--zp-fs-body: ${theme.font.size.base};`,
+    `--zp-fs-btn: ${theme.font.size.base};`,
+  ].join('\n  ');
+
+  return `${cssVariables('dark', ':host')}\n:host {\n  ${extra}\n}`;
+}
+
+/** `#RRGGBB` を指定アルファの rgba() 文字列へ変換する（生 rgba の直書きを避けるため）。 */
+function hexToRgba(hex: string, alpha: number): string {
+  const v = hex.replace('#', '');
+  const r = parseInt(v.slice(0, 2), 16);
+  const g = parseInt(v.slice(2, 4), 16);
+  const b = parseInt(v.slice(4, 6), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 
 /** Sends a notification request to the background service worker. */
 export function notify(title: string, message: string): void {
@@ -58,6 +105,12 @@ function render(node: ReactNode): void {
   host.style.left = '0';
 
   const shadow = host.attachShadow({ mode: 'open' });
+
+  // 先にデザイントークンを :host 上の CSS 変数として定義し、OVERLAY_CSS から参照する。
+  const varsEl = document.createElement('style');
+  varsEl.textContent = buildHostVariables();
+  shadow.appendChild(varsEl);
+
   const styleEl = document.createElement('style');
   styleEl.textContent = OVERLAY_CSS;
   shadow.appendChild(styleEl);
