@@ -14,22 +14,22 @@ export function Settings({ settings, isManaged, onUpdateSettings }: SettingsProp
   const t = useLang();
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-zp-3">
       {/* Language selection */}
       <Card>
-        <div className="flex items-center gap-2">
-          <Languages className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden />
-          <div className="text-sm font-semibold">{t.settings.langTitle}</div>
+        <div className="flex items-center gap-zp-2">
+          <Languages className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden />
+          <div className="text-zp-base font-semibold">{t.settings.langTitle}</div>
         </div>
-        <div className="mt-2 flex gap-2">
+        <div className="mt-zp-2 flex gap-zp-2">
           {(['ja', 'en'] as const).map((lang) => (
             <button
               key={lang}
               onClick={() => void onUpdateSettings({ language: lang })}
-              className={`rounded-lg px-4 py-1.5 text-xs font-semibold transition ${
+              className={`rounded-zp-lg px-zp-4 py-zp-1 text-zp-md font-semibold transition ${
                 settings.language === lang
-                  ? 'bg-emerald-500 text-zenprax-950'
-                  : 'bg-zenprax-950/60 text-emerald-200/60 hover:text-emerald-200'
+                  ? 'bg-brand-hover text-text-on-brand'
+                  : 'bg-bg-base/60 text-text-muted hover:text-text-secondary'
               }`}
             >
               {lang === 'ja' ? '日本語' : 'English'}
@@ -69,13 +69,13 @@ function CloudSyncCard() {
 
   return (
     <Card>
-      <div className="flex items-center gap-2">
-        <Cloud className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden />
-        <div className="text-sm font-semibold">{t.settings.cloudSync}</div>
+      <div className="flex items-center gap-zp-2">
+        <Cloud className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden />
+        <div className="text-zp-base font-semibold">{t.settings.cloudSync}</div>
       </div>
-      <div className="mt-1 text-xs text-emerald-200/60">{t.settings.cloudSyncDesc}</div>
+      <div className="mt-zp-1 text-zp-md text-text-muted">{t.settings.cloudSyncDesc}</div>
 
-      <label className="mt-3 block text-[11px] font-semibold uppercase tracking-wide text-emerald-200/50">
+      <label className="mt-zp-3 block text-zp-sm font-semibold uppercase tracking-wide text-text-muted">
         {t.settings.policyIdLabel}
       </label>
       <input
@@ -83,10 +83,10 @@ function CloudSyncCard() {
         value={policyId}
         onChange={(e) => setPolicyId(e.target.value)}
         placeholder="00000000-0000-0000-0000-000000000000"
-        className="mt-1 w-full rounded-lg border border-emerald-500/15 bg-zenprax-950/60 px-2.5 py-2 font-mono text-xs text-emerald-50 placeholder:text-emerald-200/30 focus:border-emerald-500/40 focus:outline-none"
+        className="mt-zp-1 w-full rounded-zp-lg border border-input-border bg-bg-surface px-zp-2 py-zp-2 font-mono text-zp-md text-text-primary placeholder:text-text-muted focus:border-input-focus focus:outline-none"
       />
 
-      <label className="mt-3 block text-[11px] font-semibold uppercase tracking-wide text-emerald-200/50">
+      <label className="mt-zp-3 block text-zp-sm font-semibold uppercase tracking-wide text-text-muted">
         {t.settings.decryptionKeyLabel}
       </label>
       <input
@@ -94,12 +94,12 @@ function CloudSyncCard() {
         value={decryptionKey}
         onChange={(e) => setDecryptionKey(e.target.value)}
         placeholder="Base64 encoded AES-GCM key"
-        className="mt-1 w-full rounded-lg border border-emerald-500/15 bg-zenprax-950/60 px-2.5 py-2 font-mono text-xs text-emerald-50 placeholder:text-emerald-200/30 focus:border-emerald-500/40 focus:outline-none"
+        className="mt-zp-1 w-full rounded-zp-lg border border-input-border bg-bg-surface px-zp-2 py-zp-2 font-mono text-zp-md text-text-primary placeholder:text-text-muted focus:border-input-focus focus:outline-none"
       />
 
       <button
         onClick={() => void save()}
-        className="mt-3 w-full rounded-lg bg-emerald-500 px-3 py-2 text-sm font-semibold text-zenprax-950 transition hover:brightness-110"
+        className="mt-zp-3 w-full rounded-zp-lg bg-brand-hover px-zp-3 py-zp-2 text-zp-base font-semibold text-text-on-brand transition hover:brightness-110"
       >
         {saved ? 'Saved — Syncing…' : 'Save & Sync'}
       </button>

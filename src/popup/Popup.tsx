@@ -69,20 +69,20 @@ export function Popup() {
   return (
     <LangContext.Provider value={t}>
     <Tooltip.Provider delayDuration={200}>
-    <div className="min-h-[480px] bg-zenprax-950 text-emerald-50 font-sans">
+    <div className="min-h-[480px] bg-bg-base text-text-primary font-sans">
       {/* Status header */}
-      <header className="px-5 pt-5 pb-4 bg-gradient-to-br from-zenprax-900 to-zenprax-800 border-b border-emerald-500/20">
+      <header className="px-zp-5 pt-zp-5 pb-zp-4 bg-gradient-to-br from-bg-surface to-bg-overlay border-b border-border-default">
         <div className="flex items-center justify-between">
           <div>
-            <div className="text-[11px] font-bold tracking-widest text-emerald-400 uppercase">
+            <div className="text-zp-sm font-bold tracking-widest text-brand-primary uppercase">
               Zenprax
             </div>
-            <h1 className="text-xl font-bold leading-tight">kiba.crx</h1>
+            <h1 className="text-zp-xl font-bold leading-tight">kiba.crx</h1>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-zp-2">
             {isDryRun && (
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2.5 py-1 text-[11px] font-semibold text-amber-300">
-                <span className="h-1.5 w-1.5 rounded-full bg-amber-400" />
+              <span className="inline-flex items-center gap-zp-1 rounded-zp-full bg-status-warn-bg px-zp-2 py-zp-1 text-zp-sm font-semibold text-status-warn-text">
+                <span className="h-1.5 w-1.5 rounded-zp-full bg-status-warn-text" />
                 DRY_RUN
               </span>
             )}
@@ -98,7 +98,7 @@ export function Popup() {
         {isManaged && (
           <Tooltip.Root>
             <Tooltip.Trigger asChild>
-              <div className="mt-3 flex cursor-default items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-[11px] font-semibold text-emerald-300">
+              <div className="mt-zp-3 flex cursor-default items-center gap-zp-2 rounded-zp-lg border border-border-default bg-bg-surface px-zp-3 py-zp-2 text-zp-sm font-semibold text-brand-primary">
                 <Lock className="h-3.5 w-3.5" aria-hidden />
                 {t.managed}
               </div>
@@ -107,10 +107,10 @@ export function Popup() {
               <Tooltip.Content
                 side="bottom"
                 sideOffset={6}
-                className="max-w-[280px] rounded-lg border border-emerald-500/20 bg-zenprax-900 px-3 py-2 text-[11px] text-emerald-100 shadow-xl"
+                className="max-w-[280px] rounded-zp-lg border border-border-default bg-bg-surface px-zp-3 py-zp-2 text-zp-sm text-text-primary shadow-shadow-lg"
               >
                 {t.managedTooltip}
-                <Tooltip.Arrow className="fill-zenprax-900" />
+                <Tooltip.Arrow className="fill-bg-surface" />
               </Tooltip.Content>
             </Tooltip.Portal>
           </Tooltip.Root>
@@ -118,15 +118,15 @@ export function Popup() {
       </header>
 
       {/* Tab navigation */}
-      <nav className="flex gap-1 border-b border-emerald-500/15 bg-zenprax-900/40 px-3 pt-2">
+      <nav className="flex gap-zp-1 border-b border-border-default bg-bg-surface/40 px-zp-3 pt-zp-2">
         {tabs.map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`rounded-t-lg px-3 py-2 text-xs font-semibold transition ${
+            className={`rounded-t-zp-lg px-zp-3 py-zp-2 text-zp-md font-semibold transition ${
               activeTab === tab.id
-                ? 'bg-zenprax-950 text-emerald-300'
-                : 'text-emerald-200/50 hover:text-emerald-200'
+                ? 'bg-bg-base text-brand-primary'
+                : 'text-text-muted hover:text-text-secondary'
             }`}
           >
             {tab.label}
@@ -134,7 +134,7 @@ export function Popup() {
         ))}
       </nav>
 
-      <main className="p-4">
+      <main className="p-zp-4">
         {activeTab === 'dashboard' && (
           <Dashboard
             settings={settings}
@@ -172,11 +172,13 @@ export function Popup() {
 export function StatusPill({ active, t }: { active: boolean; t: Translations }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
-        active ? 'bg-emerald-500/15 text-emerald-300' : 'bg-slate-500/15 text-slate-300'
+      className={`inline-flex items-center gap-zp-1 rounded-zp-full px-zp-2 py-zp-1 text-zp-sm font-semibold ${
+        active ? 'bg-status-safe-bg text-status-safe-text' : 'bg-bg-overlay text-text-muted'
       }`}
     >
-      <span className={`h-1.5 w-1.5 rounded-full ${active ? 'bg-emerald-400' : 'bg-slate-400'}`} />
+      <span
+        className={`h-1.5 w-1.5 rounded-zp-full ${active ? 'bg-status-safe-text' : 'bg-text-muted'}`}
+      />
       {active ? t.status.protected : t.status.paused}
     </span>
   );
@@ -184,7 +186,7 @@ export function StatusPill({ active, t }: { active: boolean; t: Translations }) 
 
 export function Card({ children }: { children: ReactNode }) {
   return (
-    <section className="rounded-xl border border-emerald-500/15 bg-zenprax-900/60 p-3.5">
+    <section className="rounded-zp-xl border border-border-default bg-bg-surface/60 p-zp-3">
       {children}
     </section>
   );
@@ -193,17 +195,17 @@ export function Card({ children }: { children: ReactNode }) {
 export function StatCard({
   label,
   value,
-  accent = 'emerald',
+  accent = 'brand',
 }: {
   label: string;
   value: string | number;
-  accent?: 'emerald' | 'amber';
+  accent?: 'brand' | 'warn';
 }) {
-  const color = accent === 'amber' ? 'text-amber-300' : 'text-emerald-300';
+  const color = accent === 'warn' ? 'text-status-warn-text' : 'text-brand-primary';
   return (
-    <div className="rounded-xl border border-emerald-500/15 bg-zenprax-900/60 p-3.5">
-      <div className={`text-2xl font-bold ${color}`}>{value}</div>
-      <div className="text-[11px] uppercase tracking-wide text-emerald-200/50">{label}</div>
+    <div className="rounded-zp-xl border border-border-default bg-bg-surface/60 p-zp-3">
+      <div className={`text-zp-2xl font-bold ${color}`}>{value}</div>
+      <div className="text-zp-sm uppercase tracking-wide text-text-muted">{label}</div>
     </div>
   );
 }
@@ -225,9 +227,9 @@ export function Toggle({
       disabled={disabled}
       onCheckedChange={onChange}
       aria-label={label}
-      className="relative h-6 w-11 shrink-0 rounded-full bg-slate-600 transition data-[state=checked]:bg-emerald-500 disabled:opacity-50"
+      className="relative h-6 w-11 shrink-0 rounded-zp-full bg-toggle-off transition data-[state=checked]:bg-brand-primary disabled:opacity-50"
     >
-      <Switch.Thumb className="block h-5 w-5 translate-x-0.5 rounded-full bg-white transition-transform data-[state=checked]:translate-x-[22px]" />
+      <Switch.Thumb className="block h-5 w-5 translate-x-0.5 rounded-zp-full bg-toggle-knob transition-transform data-[state=checked]:translate-x-[22px]" />
     </Switch.Root>
   );
 }
@@ -235,23 +237,23 @@ export function Toggle({
 export function TenantList({ entries, emptyLabel }: { entries: TenantWhitelistEntry[]; emptyLabel: string }) {
   if (entries.length === 0) {
     return (
-      <div className="mt-2 rounded-lg border border-dashed border-emerald-500/15 py-3 text-center text-[11px] text-emerald-200/40">
+      <div className="mt-zp-2 rounded-zp-lg border border-dashed border-border-default py-zp-3 text-center text-zp-sm text-text-muted">
         {emptyLabel}
       </div>
     );
   }
   return (
-    <ul className="mt-2 space-y-1.5">
+    <ul className="mt-zp-2 space-y-1.5">
       {entries.map((e) => (
         <li
           key={`${e.provider}-${e.tenantId}`}
-          className="flex items-center justify-between rounded-lg bg-zenprax-950/60 px-2.5 py-2 text-xs"
+          className="flex items-center justify-between rounded-zp-lg bg-bg-base/60 px-zp-2 py-zp-2 text-zp-md"
         >
           <div className="min-w-0">
-            <div className="truncate text-emerald-50">{e.label}</div>
-            <div className="truncate font-mono text-[10px] text-emerald-200/40">{e.tenantId}</div>
+            <div className="truncate text-text-primary">{e.label}</div>
+            <div className="truncate font-mono text-zp-xs text-text-muted">{e.tenantId}</div>
           </div>
-          <span className="shrink-0 rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] font-bold uppercase text-emerald-300">
+          <span className="shrink-0 rounded-zp-sm bg-brand-muted px-zp-1 py-0.5 text-zp-xs font-bold uppercase text-brand-primary">
             {e.provider}
           </span>
         </li>

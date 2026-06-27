@@ -28,25 +28,25 @@ export function Dashboard({
   const locked = loading || isManaged;
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-zp-3">
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-2 gap-zp-3">
         <StatCard label={t.dashboard.itemsBlocked} value={blockedCount} />
         <StatCard
           label={t.dashboard.bypass}
           value={settings.oneTimeBypass ? t.dashboard.armed : t.dashboard.off}
-          accent={settings.oneTimeBypass ? 'amber' : 'emerald'}
+          accent={settings.oneTimeBypass ? 'warn' : 'brand'}
         />
       </div>
 
       {/* Anti-ClickFix toggle */}
       <Card>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <MousePointerClick className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden />
+          <div className="flex items-center gap-zp-2">
+            <MousePointerClick className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden />
             <div>
-              <div className="text-sm font-semibold">{t.dashboard.antiClickFix}</div>
-              <div className="text-xs text-emerald-200/60">{t.dashboard.antiClickFixDesc}</div>
+              <div className="text-zp-base font-semibold">{t.dashboard.antiClickFix}</div>
+              <div className="text-zp-md text-text-muted">{t.dashboard.antiClickFixDesc}</div>
             </div>
           </div>
           <Toggle
@@ -61,11 +61,11 @@ export function Dashboard({
       {/* Paste masking toggle */}
       <Card>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <EyeOff className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden />
+          <div className="flex items-center gap-zp-2">
+            <EyeOff className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden />
             <div>
-              <div className="text-sm font-semibold">{t.dashboard.masking}</div>
-              <div className="text-xs text-emerald-200/60">{t.dashboard.maskingDesc}</div>
+              <div className="text-zp-base font-semibold">{t.dashboard.masking}</div>
+              <div className="text-zp-md text-text-muted">{t.dashboard.maskingDesc}</div>
             </div>
           </div>
           <Toggle
@@ -80,11 +80,11 @@ export function Dashboard({
       {/* Pseudo-SSO toggle */}
       <Card>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <KeyRound className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden />
+          <div className="flex items-center gap-zp-2">
+            <KeyRound className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden />
             <div>
-              <div className="text-sm font-semibold">{t.dashboard.sso}</div>
-              <div className="text-xs text-emerald-200/60">{t.dashboard.ssoDesc}</div>
+              <div className="text-zp-base font-semibold">{t.dashboard.sso}</div>
+              <div className="text-zp-md text-text-muted">{t.dashboard.ssoDesc}</div>
             </div>
           </div>
           <Toggle
@@ -99,11 +99,11 @@ export function Dashboard({
       {/* Trusted tenant whitelist (read-only) */}
       <Card>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Building2 className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden />
-            <div className="text-sm font-semibold">{t.dashboard.trustedTenants}</div>
+          <div className="flex items-center gap-zp-2">
+            <Building2 className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden />
+            <div className="text-zp-base font-semibold">{t.dashboard.trustedTenants}</div>
           </div>
-          <span className="text-[11px] text-emerald-200/50">
+          <span className="text-zp-sm text-text-muted">
             {settings.tenantWhitelist.length} {t.dashboard.entries}
           </span>
         </div>
@@ -112,15 +112,15 @@ export function Dashboard({
 
       {/* One-Time Bypass control */}
       <Card>
-        <div className="flex items-center gap-2">
-          <Upload className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden />
-          <div className="text-sm font-semibold">{t.dashboard.bypassTitle}</div>
+        <div className="flex items-center gap-zp-2">
+          <Upload className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden />
+          <div className="text-zp-base font-semibold">{t.dashboard.bypassTitle}</div>
         </div>
-        <div className="mt-1 text-xs text-emerald-200/60">{t.dashboard.bypassDesc}</div>
+        <div className="mt-zp-1 text-zp-md text-text-muted">{t.dashboard.bypassDesc}</div>
         <button
           onClick={onGrantBypass}
           disabled={settings.oneTimeBypass !== null || isManaged}
-          className="mt-3 w-full rounded-lg bg-emerald-500 px-3 py-2 text-sm font-semibold text-zenprax-950 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+          className="mt-zp-3 w-full rounded-zp-lg bg-brand-hover px-zp-3 py-zp-2 text-zp-base font-semibold text-text-on-brand transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {settings.oneTimeBypass ? t.dashboard.bypassArmed : t.dashboard.bypassRequest}
         </button>

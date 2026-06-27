@@ -11,28 +11,28 @@ export function SsoList({ configured, count }: SsoListProps) {
   const t = useLang();
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-zp-3">
       <Card>
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <KeyRound className="h-4 w-4 shrink-0 text-emerald-400" aria-hidden />
-            <div className="text-sm font-semibold">{t.sso.title}</div>
+          <div className="flex items-center gap-zp-2">
+            <KeyRound className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden />
+            <div className="text-zp-base font-semibold">{t.sso.title}</div>
           </div>
-          <span className="text-[11px] text-emerald-200/50">
+          <span className="text-zp-sm text-text-muted">
             {count} {t.sso.synced}
           </span>
         </div>
-        <p className="mt-1 text-xs text-emerald-200/60">{t.sso.desc}</p>
+        <p className="mt-zp-1 text-zp-md text-text-muted">{t.sso.desc}</p>
         {!configured ? (
-          <div className="mt-3 rounded-lg border border-dashed border-emerald-500/15 py-3 text-center text-[11px] text-emerald-200/40">
+          <div className="mt-zp-3 rounded-zp-lg border border-dashed border-border-default py-zp-3 text-center text-zp-sm text-text-muted">
             {t.sso.notConfigured}
           </div>
         ) : count === 0 ? (
-          <div className="mt-3 rounded-lg border border-dashed border-emerald-500/15 py-3 text-center text-[11px] text-emerald-200/40">
+          <div className="mt-zp-3 rounded-zp-lg border border-dashed border-border-default py-zp-3 text-center text-zp-sm text-text-muted">
             {t.sso.noCredentials}
           </div>
         ) : (
-          <div className="mt-3 rounded-lg bg-zenprax-950/60 px-2.5 py-2 text-xs text-emerald-200/70">
+          <div className="mt-zp-3 rounded-zp-lg bg-bg-base/60 px-zp-2 py-zp-2 text-zp-md text-text-secondary">
             {t.sso.countSynced(count)}
           </div>
         )}
