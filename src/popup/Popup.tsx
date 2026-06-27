@@ -164,6 +164,7 @@ export function Popup() {
             onToggleDownloadGater={toggleDownloadGater}
             onToggleScreenShareAudit={toggleScreenShareAudit}
             onGrantBypass={grantBypass}
+            onUpdateSettings={updateSettings}
           />
         )}
         {activeTab === 'filter' && (
