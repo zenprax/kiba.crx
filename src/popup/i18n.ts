@@ -28,6 +28,8 @@ export const JA: Translations = {
     bypassDesc: '制限ドメインへの単回アップロード例外を申請します。承認は管理コンソール経由です。',
     bypassArmed: '回避有効中 — 1回アップロードで消費',
     bypassRequest: 'ワンタイム回避を申請',
+    networkFilter: 'Threat Intelligence Filter',
+    networkFilterDesc: '脅威インテリジェンスに基づくネットワークフィルタリング',
   },
   sso: {
     title: '共有認証情報',
@@ -74,6 +76,8 @@ export type Translations = {
     bypassDesc: string;
     bypassArmed: string;
     bypassRequest: string;
+    networkFilter: string;
+    networkFilterDesc: string;
   };
   sso: {
     title: string;
@@ -122,6 +126,8 @@ export const EN: Translations = {
       'Request a single-use upload exception for restricted domains. Approval is mediated by the admin console.',
     bypassArmed: 'Bypass Armed — use one upload',
     bypassRequest: 'Request One-Time Bypass',
+    networkFilter: 'Threat Intelligence Filter',
+    networkFilterDesc: 'Network filtering based on threat intelligence feeds',
   },
   sso: {
     title: 'Shared Credentials',

@@ -57,6 +57,10 @@ export function Popup() {
     await updateSettings({ ssoEnabled: !settings.ssoEnabled });
   }
 
+  async function toggleNetworkFilter() {
+    await updateSettings({ networkFilterEnabled: !settings.networkFilterEnabled });
+  }
+
   async function grantBypass() {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab?.url) return;
@@ -144,6 +148,7 @@ export function Popup() {
             onToggleAntiClickFix={toggleAntiClickFix}
             onToggleMask={toggleMask}
             onToggleSso={toggleSso}
+            onToggleNetworkFilter={toggleNetworkFilter}
             onGrantBypass={grantBypass}
           />
         )}

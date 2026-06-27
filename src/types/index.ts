@@ -246,6 +246,12 @@ export interface KibaSettings {
    */
   enabled: boolean;
   /**
+   * When true, the declarativeNetRequest ruleset 'ad_rules' is enabled,
+   * blocking known threat/ad domains. Can be toggled by the user or managed
+   * by a remote policy.
+   */
+  networkFilterEnabled: boolean;
+  /**
    * Tab IDs to hide from the popup navigation. Currently always empty.
    * Reserved for future conditional display logic.
    */
@@ -274,6 +280,7 @@ export const DEFAULT_SETTINGS: KibaSettings = {
   auditLog: [],
   language: 'ja',
   enabled: true,
+  networkFilterEnabled: true,
   hiddenTabs: [],
 };
 

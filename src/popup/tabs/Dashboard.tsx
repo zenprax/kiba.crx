@@ -1,4 +1,4 @@
-import { MousePointerClick, EyeOff, KeyRound, Building2, Upload } from 'lucide-react';
+import { MousePointerClick, EyeOff, KeyRound, Building2, Upload, ShieldAlert } from 'lucide-react';
 import type { KibaSettings } from '../../types';
 import { Card, StatCard, Toggle, TenantList } from '../Popup';
 import { useLang } from '../i18n';
@@ -11,6 +11,7 @@ export interface DashboardProps {
   onToggleAntiClickFix: () => void;
   onToggleMask: () => void;
   onToggleSso: () => void;
+  onToggleNetworkFilter: () => void;
   onGrantBypass: () => void;
 }
 
@@ -22,6 +23,7 @@ export function Dashboard({
   onToggleAntiClickFix,
   onToggleMask,
   onToggleSso,
+  onToggleNetworkFilter,
   onGrantBypass,
 }: DashboardProps) {
   const t = useLang();
@@ -92,6 +94,25 @@ export function Dashboard({
             disabled={locked}
             onChange={onToggleSso}
             label="Pseudo-SSO Autofill"
+          />
+        </div>
+      </Card>
+
+      {/* Threat Intelligence Filter toggle */}
+      <Card>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-zp-2">
+            <ShieldAlert className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden />
+            <div>
+              <div className="text-zp-base font-semibold">{t.dashboard.networkFilter}</div>
+              <div className="text-zp-md text-text-muted">{t.dashboard.networkFilterDesc}</div>
+            </div>
+          </div>
+          <Toggle
+            checked={settings.networkFilterEnabled}
+            disabled={locked}
+            onChange={onToggleNetworkFilter}
+            label="Threat Intelligence Filter"
           />
         </div>
       </Card>

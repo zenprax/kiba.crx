@@ -11,6 +11,7 @@
 import { DEFAULT_SETTINGS } from '../types';
 import {
   getSettings,
+  onSettingsChanged,
   purgeLegacyCredentials,
   setSettings,
 } from '../lib/storage';
@@ -120,3 +121,19 @@ initSyncManager();
 initAuthHandler();
 initCredentialBroker();
 initBypassManager();
+
+// Sync the declarativeNetRequest 'ad_rules' ruleset state with the
+// networkFilterEnabled setting on startup and on every change.
+async function applyNetworkFilterState(enabled: boolean): Promise<void> {
+  await chrome.declarativeNetRequest.updateEnabledRulesets(
+    enabled
+      ? { enableRulesetIds: ['ad_rules'], disableRulesetIds: [] }
+      : { enableRulesetIds: [], disableRulesetIds: ['ad_rules'] },
+  );
+}
+
+void getSettings().then((s) => applyNetworkFilterState(s.networkFilterEnabled));
+
+onSettingsChanged((s) => {
+  void applyNetworkFilterState(s.networkFilterEnabled);
+});
