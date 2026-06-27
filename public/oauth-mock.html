@@ -1,0 +1,160 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>ZENPRAX Cloud · Sign in</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #0b1020;
+        --surface: #141b32;
+        --border: #26304f;
+        --text: #e8ecf6;
+        --muted: #9aa6c4;
+        --brand: #5b8cff;
+        --brand-hover: #4577f;
+        --on-brand: #ffffff;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(120% 120% at 50% 0%, #16203f 0%, var(--bg) 60%);
+        font-family:
+          ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue',
+          Arial, 'Noto Sans JP', sans-serif;
+        color: var(--text);
+        padding: 24px;
+      }
+      .card {
+        width: 100%;
+        max-width: 380px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        padding: 28px 26px;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 18px;
+      }
+      .brand .logo {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        display: grid;
+        place-items: center;
+        background: linear-gradient(135deg, var(--brand), #7aa2ff);
+        color: var(--on-brand);
+        font-weight: 800;
+        font-size: 18px;
+      }
+      .brand .name {
+        font-weight: 700;
+        font-size: 16px;
+        letter-spacing: 0.2px;
+      }
+      h1 {
+        font-size: 18px;
+        margin: 6px 0 6px;
+      }
+      p {
+        margin: 0 0 18px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.6;
+      }
+      .scopes {
+        list-style: none;
+        margin: 0 0 22px;
+        padding: 14px 16px;
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.02);
+      }
+      .scopes li {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 12.5px;
+        color: var(--text);
+        padding: 4px 0;
+      }
+      .scopes li::before {
+        content: '✓';
+        color: var(--brand);
+        font-weight: 800;
+      }
+      button {
+        width: 100%;
+        border: none;
+        border-radius: 12px;
+        padding: 12px 16px;
+        font-size: 14px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: filter 0.15s ease;
+      }
+      .approve {
+        background: var(--brand-hover);
+        color: var(--on-brand);
+      }
+      .approve:hover {
+        filter: brightness(1.1);
+      }
+      .approve:disabled {
+        opacity: 0.6;
+        cursor: progress;
+      }
+      .cancel {
+        margin-top: 10px;
+        background: transparent;
+        color: var(--muted);
+      }
+      .cancel:hover {
+        color: var(--text);
+      }
+      .done {
+        text-align: center;
+        color: var(--brand);
+        font-weight: 700;
+        font-size: 14px;
+        margin-top: 14px;
+        min-height: 18px;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card" role="dialog" aria-label="ZENPRAX Cloud sign in">
+      <div class="brand">
+        <div class="logo">Z</div>
+        <div class="name">ZENPRAX Cloud</div>
+      </div>
+      <h1>拡張機能の接続を承認</h1>
+      <p>
+        kiba.crx があなたの ZENPRAX Cloud アカウントに安全に接続し、暗号化された
+        セキュリティポリシーを同期しようとしています。
+      </p>
+      <ul class="scopes">
+        <li>暗号化ポリシーの読み取り</li>
+        <li>復号鍵（BYOK）のセキュアな受領</li>
+        <li>テナント許可リストの同期</li>
+      </ul>
+      <button class="approve" id="approve" type="button">承認して接続する</button>
+      <button class="cancel" id="cancel" type="button">キャンセル</button>
+      <div class="done" id="done" aria-live="polite"></div>
+    </main>
+    <!-- このページは web_accessible_resource として拡張コンテキストで動作する。
+         承認シグナルは window.opener (popup) へ postMessage で返す。 -->
+    <script src="./oauth-mock.js"></script>
+  </body>
+</html>
