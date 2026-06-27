@@ -1,4 +1,12 @@
-import { MousePointerClick, EyeOff, KeyRound, Building2, Upload, ShieldAlert } from 'lucide-react';
+import {
+  MousePointerClick,
+  EyeOff,
+  KeyRound,
+  Building2,
+  Upload,
+  ShieldAlert,
+  Download,
+} from 'lucide-react';
 import type { KibaSettings } from '../../types';
 import { Card, StatCard, Toggle, TenantList } from '../Popup';
 import { useLang } from '../i18n';
@@ -12,6 +20,7 @@ export interface DashboardProps {
   onToggleMask: () => void;
   onToggleSso: () => void;
   onToggleNetworkFilter: () => void;
+  onToggleDownloadGater: () => void;
   onGrantBypass: () => void;
 }
 
@@ -24,6 +33,7 @@ export function Dashboard({
   onToggleMask,
   onToggleSso,
   onToggleNetworkFilter,
+  onToggleDownloadGater,
   onGrantBypass,
 }: DashboardProps) {
   const t = useLang();
@@ -113,6 +123,25 @@ export function Dashboard({
             disabled={locked}
             onChange={onToggleNetworkFilter}
             label="Threat Intelligence Filter"
+          />
+        </div>
+      </Card>
+
+      {/* Download Gater toggle */}
+      <Card>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-zp-2">
+            <Download className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden />
+            <div>
+              <div className="text-zp-base font-semibold">{t.download.enable}</div>
+              <div className="text-zp-md text-text-muted">{t.download.enableDesc}</div>
+            </div>
+          </div>
+          <Toggle
+            checked={settings.downloadGaterEnabled}
+            disabled={locked}
+            onChange={onToggleDownloadGater}
+            label="Download Gater"
           />
         </div>
       </Card>

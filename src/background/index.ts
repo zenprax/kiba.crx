@@ -24,6 +24,7 @@ import {
   initCredentialBroker,
 } from './credentialBroker';
 import { initBypassManager, requestBypass } from './bypassManager';
+import { initDownloadGater } from './downloadGater';
 import { buildDomainRules } from './domainRules';
 import { CONSOLE_CONFIG } from '../lib/consoleClient';
 
@@ -122,6 +123,7 @@ initSyncManager();
 initAuthHandler();
 initCredentialBroker();
 initBypassManager();
+initDownloadGater();
 
 // Sync the declarativeNetRequest 'ad_rules' ruleset state with the
 // networkFilterEnabled setting on startup and on every change.

@@ -65,6 +65,10 @@ export function Popup() {
     await updateSettings({ networkFilterEnabled: !settings.networkFilterEnabled });
   }
 
+  async function toggleDownloadGater() {
+    await updateSettings({ downloadGaterEnabled: !settings.downloadGaterEnabled });
+  }
+
   async function grantBypass() {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab?.url) return;
@@ -153,6 +157,7 @@ export function Popup() {
             onToggleMask={toggleMask}
             onToggleSso={toggleSso}
             onToggleNetworkFilter={toggleNetworkFilter}
+            onToggleDownloadGater={toggleDownloadGater}
             onGrantBypass={grantBypass}
           />
         )}
