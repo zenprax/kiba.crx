@@ -37,6 +37,16 @@ export default defineManifest({
       run_at: 'document_start',
       all_frames: true,
     },
+    {
+      // 画面共有監査: getDisplayMedia をフックするため main world に注入する。
+      // ページと同一コンテキストで navigator を差し替える必要があるため world:'MAIN'。
+      // 監査記録は window.postMessage 経由で isolated world（index.ts）へ委譲する。
+      matches: ['<all_urls>'],
+      js: ['src/content/mainWorld/getDisplayMediaPatch.ts'],
+      run_at: 'document_start',
+      all_frames: true,
+      world: 'MAIN',
+    },
   ],
   action: {
     default_popup: 'src/popup/index.html',

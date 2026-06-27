@@ -69,6 +69,10 @@ export function Popup() {
     await updateSettings({ downloadGaterEnabled: !settings.downloadGaterEnabled });
   }
 
+  async function toggleScreenShareAudit() {
+    await updateSettings({ screenShareAuditEnabled: !settings.screenShareAuditEnabled });
+  }
+
   async function grantBypass() {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab?.url) return;
@@ -158,6 +162,7 @@ export function Popup() {
             onToggleSso={toggleSso}
             onToggleNetworkFilter={toggleNetworkFilter}
             onToggleDownloadGater={toggleDownloadGater}
+            onToggleScreenShareAudit={toggleScreenShareAudit}
             onGrantBypass={grantBypass}
           />
         )}
