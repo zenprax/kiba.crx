@@ -1,7 +1,18 @@
 import { useEffect, useState } from 'react';
-import { Cloud, Languages, Building2, Plus, X, KeyRound, Lock, CheckCircle2 } from 'lucide-react';
-import type { KibaSettings, TenantWhitelistEntry } from '../../types';
+import {
+  Cloud,
+  Languages,
+  Building2,
+  Plus,
+  X,
+  KeyRound,
+  Lock,
+  CheckCircle2,
+  SlidersHorizontal,
+} from 'lucide-react';
+import type { KibaMode, KibaSettings, TenantWhitelistEntry } from '../../types';
 import type { TenantProvider } from '../../types';
+import type { DryRunFeature } from '../../lib/dryRun';
 import { Card } from '../Popup';
 import { useLang } from '../i18n';
 
@@ -38,6 +49,13 @@ export function Settings({ settings, isManaged, onUpdateSettings }: SettingsProp
           ))}
         </div>
       </Card>
+
+      {/* Per-feature enforcement modes (機能単位 DRY_RUN) */}
+      <FeatureModesCard
+        settings={settings}
+        isManaged={isManaged}
+        onUpdateSettings={onUpdateSettings}
+      />
 
       {/* Cloud sync settings. Visible even when managed, but locked down. */}
       <CloudSyncCard isManaged={isManaged} />
@@ -169,6 +187,78 @@ function CloudSyncCard({ isManaged }: { isManaged: boolean }) {
       </button>
 
       {isManaged && <ManagedNote text={t.settings.managedNote} />}
+    </Card>
+  );
+}
+
+/** 機能別の実施モード（ENFORCE / DRY_RUN / 全体設定に従う）切替カード。 */
+function FeatureModesCard({
+  settings,
+  isManaged,
+  onUpdateSettings,
+}: {
+  settings: KibaSettings;
+  isManaged: boolean;
+  onUpdateSettings: (patch: Partial<KibaSettings>) => Promise<void>;
+}) {
+  const t = useLang();
+  const featureModes = settings.featureModes ?? {};
+
+  const features: { key: DryRunFeature; label: string }[] = [
+    { key: 'paste', label: t.settings.featurePaste },
+    { key: 'file', label: t.settings.featureFile },
+    { key: 'tenant', label: t.settings.featureTenant },
+    { key: 'download', label: t.settings.featureDownload },
+  ];
+
+  // 'global' は該当キーを削除して全体 mode にフォールバックさせる擬似値。
+  type Choice = KibaMode | 'global';
+
+  async function setFeatureMode(key: DryRunFeature, choice: Choice) {
+    const next: NonNullable<KibaSettings['featureModes']> = { ...featureModes };
+    if (choice === 'global') {
+      delete next[key];
+    } else {
+      next[key] = choice;
+    }
+    await onUpdateSettings({ featureModes: next });
+  }
+
+  return (
+    <Card>
+      <div className="flex items-center gap-zp-2">
+        <SlidersHorizontal className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden />
+        <div className="text-zp-base font-semibold">{t.settings.featureModesTitle}</div>
+      </div>
+      <div className="mt-zp-1 text-zp-md text-text-muted">{t.settings.featureModesDesc}</div>
+
+      {isManaged ? (
+        <ManagedNote text={t.settings.managedNote} />
+      ) : (
+        <ul className="mt-zp-3 space-y-zp-2">
+          {features.map(({ key, label }) => {
+            const value: Choice = featureModes[key] ?? 'global';
+            return (
+              <li
+                key={key}
+                className="flex items-center justify-between gap-zp-2 rounded-zp-lg bg-bg-base/60 px-zp-2 py-zp-2 text-zp-md"
+              >
+                <span className="min-w-0 truncate text-text-primary">{label}</span>
+                <select
+                  value={value}
+                  onChange={(e) => void setFeatureMode(key, e.target.value as Choice)}
+                  aria-label={label}
+                  className="shrink-0 rounded-zp-lg border border-input-border bg-bg-surface px-zp-2 py-zp-1 text-zp-sm text-text-primary focus:border-input-focus focus:outline-none"
+                >
+                  <option value="global">{t.settings.useGlobal}</option>
+                  <option value="ENFORCE">{t.settings.enforce}</option>
+                  <option value="DRY_RUN">{t.settings.dryRun}</option>
+                </select>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </Card>
   );
 }

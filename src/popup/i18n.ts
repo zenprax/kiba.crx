@@ -80,6 +80,17 @@ export const JA: Translations = {
     connectedDesc: 'クラウド同期が有効です。ポリシーは自動的に最新化されます。',
     reconnectButton: '再接続する',
     managedNote: '組織ポリシーにより読み取り専用です。',
+    featureModesTitle: '機能別の実施モード',
+    featureModesDesc:
+      '機能ごとに ENFORCE（実ブロック）／DRY_RUN（記録のみ）を選べます。未指定の機能は全体設定に従います。',
+    globalMode: '全体設定',
+    enforce: 'ENFORCE',
+    dryRun: 'DRY_RUN',
+    featurePaste: 'ペースト検知',
+    featureFile: 'ファイルアップロード',
+    featureTenant: 'テナント制限・マスク',
+    featureDownload: 'ダウンロード制御',
+    useGlobal: '全体設定に従う',
   },
   tenantManager: {
     title: '信頼テナントの管理',
@@ -225,6 +236,16 @@ export type Translations = {
     connectedDesc: string;
     reconnectButton: string;
     managedNote: string;
+    featureModesTitle: string;
+    featureModesDesc: string;
+    globalMode: string;
+    enforce: string;
+    dryRun: string;
+    featurePaste: string;
+    featureFile: string;
+    featureTenant: string;
+    featureDownload: string;
+    useGlobal: string;
   };
   managed: string;
   managedTooltip: string;
@@ -311,6 +332,17 @@ export const EN: Translations = {
     connectedDesc: 'Cloud sync is active. Policies refresh automatically.',
     reconnectButton: 'Reconnect',
     managedNote: 'Read-only under organization policy.',
+    featureModesTitle: 'Per-Feature Enforcement',
+    featureModesDesc:
+      'Choose ENFORCE (real block) or DRY_RUN (log only) per feature. Features left unset follow the global setting.',
+    globalMode: 'Global setting',
+    enforce: 'ENFORCE',
+    dryRun: 'DRY_RUN',
+    featurePaste: 'Paste detection',
+    featureFile: 'File upload',
+    featureTenant: 'Tenant restriction & masking',
+    featureDownload: 'Download control',
+    useGlobal: 'Use global',
   },
   tenantManager: {
     title: 'Manage Trusted Tenants',

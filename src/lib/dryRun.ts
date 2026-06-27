@@ -18,6 +18,24 @@ export function isDryRun(settings: Pick<KibaSettings, 'mode'> | null | undefined
 }
 
 /**
+ * 機能単位の enforcement モード。`featureModes` に該当機能の上書きがあればそれを、
+ * なければグローバルな `mode` を採用する。これにより「ファイルは ENFORCE のまま
+ * ペースト検知だけ DRY_RUN」といった機能ごとのパイロット運用ができる。
+ *
+ * 後方互換: `featureModes` 未設定（既存ユーザー）なら全機能が従来どおり `mode` に従う。
+ */
+export type DryRunFeature = 'paste' | 'file' | 'tenant' | 'download';
+
+export function isDryRunFor(
+  settings: Pick<KibaSettings, 'mode' | 'featureModes'> | null | undefined,
+  feature: DryRunFeature,
+): boolean {
+  if (!settings) return false;
+  const effective = settings.featureModes?.[feature] ?? settings.mode;
+  return effective === 'DRY_RUN';
+}
+
+/**
  * Tags an audit-log detail string for DRY_RUN. When `dryRun` is true the
  * `[DRY_RUN]` prefix is prepended (idempotent — it won't double-prefix);
  * otherwise the detail is returned unchanged.
