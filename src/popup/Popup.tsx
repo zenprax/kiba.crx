@@ -65,6 +65,10 @@ export function Popup() {
     await updateSettings({ networkFilterEnabled: !settings.networkFilterEnabled });
   }
 
+  async function toggleScreenShareAudit() {
+    await updateSettings({ screenShareAuditEnabled: !settings.screenShareAuditEnabled });
+  }
+
   async function grantBypass() {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab?.url) return;
@@ -153,6 +157,7 @@ export function Popup() {
             onToggleMask={toggleMask}
             onToggleSso={toggleSso}
             onToggleNetworkFilter={toggleNetworkFilter}
+            onToggleScreenShareAudit={toggleScreenShareAudit}
             onGrantBypass={grantBypass}
           />
         )}

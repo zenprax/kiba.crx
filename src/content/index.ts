@@ -24,6 +24,7 @@ import { initSsoHandler } from './ssoFiller';
 // pasteGuard.ts / fileGater.ts; reconfirm if Worker A revises them.
 import { initPasteGuard } from './pasteGuard';
 import { initFileGater } from './fileGater';
+import { initScreenShareHook } from './screenShareHook';
 
 /**
  * Cached copy of settings kept in sync via chrome.storage.onChanged so the
@@ -46,10 +47,12 @@ const teardowns: {
   pasteGuard: Teardown;
   fileGater: Teardown;
   ssoFiller: Teardown;
+  screenShare: Teardown;
 } = {
   pasteGuard: null,
   fileGater: null,
   ssoFiller: null,
+  screenShare: null,
 };
 
 /** True when either paste-related control (block or mask) is enabled. */
@@ -80,6 +83,7 @@ function reconcile(s: KibaSettings | null): void {
   if (s?.enabled === false) {
     stop('pasteGuard');
     stop('ssoFiller');
+    stop('screenShare');
     return;
   }
 
@@ -104,6 +108,14 @@ function reconcile(s: KibaSettings | null): void {
     });
   } else {
     stop('ssoFiller');
+  }
+
+  // Screen-share audit: the main-world hook always patches getDisplayMedia, but
+  // we only listen for (and record) its postMessage when auditing is enabled.
+  if (s?.screenShareAuditEnabled) {
+    start('screenShare', () => initScreenShareHook());
+  } else {
+    stop('screenShare');
   }
 }
 
