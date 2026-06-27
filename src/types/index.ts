@@ -201,6 +201,9 @@ export interface KibaMasterPolicy {
  * Settings
  * ------------------------------------------------------------------ */
 
+/** Top-level popup tab identifiers. */
+export type TabId = 'dashboard' | 'sso' | 'audit' | 'settings';
+
 /** The complete local policy/configuration state persisted in chrome.storage.local. */
 export interface KibaSettings {
   /** When true, the content script inspects and blocks dangerous pastes. */
@@ -235,6 +238,18 @@ export interface KibaSettings {
   tenantWhitelist: TenantWhitelistEntry[];
   /** Rolling list of recent local security events (newest first). */
   auditLog: AuditLogEntry[];
+  /** UI display language. Defaults to 'ja'. */
+  language: 'ja' | 'en';
+  /**
+   * Global on/off switch. When false, all content-script plugins are stopped.
+   * Controlled by the master toggle in the popup header.
+   */
+  enabled: boolean;
+  /**
+   * Tab IDs to hide from the popup navigation. Currently always empty.
+   * Reserved for future conditional display logic.
+   */
+  hiddenTabs: TabId[];
 }
 
 /** Default settings applied on install and used as a fallback when reading storage. */
@@ -257,6 +272,9 @@ export const DEFAULT_SETTINGS: KibaSettings = {
     { provider: 'github', tenantId: 'zenprax', label: 'Zenprax GitHub Org' },
   ],
   auditLog: [],
+  language: 'ja',
+  enabled: true,
+  hiddenTabs: [],
 };
 
 /** Maximum number of audit-log entries retained locally. */

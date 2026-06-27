@@ -10,8 +10,8 @@ import {
 } from 'lucide-react';
 import type { AuditEventType, AuditLogEntry } from '../../types';
 import { Card } from '../Popup';
+import { useLang } from '../i18n';
 
-/** Short badge labels per audit event type. */
 const EVENT_LABEL: Record<AuditEventType, string> = {
   'paste-block': 'PASTE',
   'file-block': 'FILE',
@@ -22,7 +22,6 @@ const EVENT_LABEL: Record<AuditEventType, string> = {
   'extension-audit': 'EXT',
 };
 
-/** Icon per audit event type for at-a-glance scanning. */
 const EVENT_ICON: Record<AuditEventType, LucideIcon> = {
   'paste-block': ClipboardX,
   'file-block': FileX2,
@@ -33,7 +32,6 @@ const EVENT_ICON: Record<AuditEventType, LucideIcon> = {
   'extension-audit': Puzzle,
 };
 
-/** Badge color classes per audit event type. */
 const EVENT_COLOR: Record<AuditEventType, string> = {
   'paste-block': 'text-rose-300 bg-rose-500/10',
   'file-block': 'text-amber-300 bg-amber-500/10',
@@ -44,41 +42,44 @@ const EVENT_COLOR: Record<AuditEventType, string> = {
   'extension-audit': 'text-violet-300 bg-violet-500/10',
 };
 
-/** Audit log tab: recent local security events, newest first. */
 export function AuditLog({ entries }: { entries: AuditLogEntry[] }) {
+  const t = useLang();
+
   return (
     <div className="space-y-3">
       <Card>
         <div className="flex items-center justify-between">
-          <div className="text-sm font-semibold">Audit Log</div>
-          <span className="text-[11px] text-emerald-200/50">{entries.length} events</span>
+          <div className="text-sm font-semibold">{t.audit.title}</div>
+          <span className="text-[11px] text-emerald-200/50">
+            {entries.length} {t.audit.events}
+          </span>
         </div>
         {entries.length === 0 ? (
           <div className="mt-2 rounded-lg border border-dashed border-emerald-500/15 py-6 text-center text-xs text-emerald-200/40">
-            No security events recorded yet.
+            {t.audit.noEvents}
           </div>
         ) : (
           <ul className="mt-2 max-h-72 space-y-1.5 overflow-y-auto pr-1">
             {entries.map((e, i) => {
               const Icon = EVENT_ICON[e.type];
               return (
-              <li
-                key={`${e.ts}-${i}`}
-                className="flex items-start gap-2 rounded-lg bg-zenprax-950/60 px-2.5 py-2 text-xs"
-              >
-                <span
-                  className={`mt-0.5 flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold ${EVENT_COLOR[e.type]}`}
+                <li
+                  key={`${e.ts}-${i}`}
+                  className="flex items-start gap-2 rounded-lg bg-zenprax-950/60 px-2.5 py-2 text-xs"
                 >
-                  <Icon className="h-3 w-3" aria-hidden />
-                  {EVENT_LABEL[e.type]}
-                </span>
-                <div className="min-w-0">
-                  <div className="truncate text-emerald-50">{e.detail}</div>
-                  <div className="text-[10px] text-emerald-200/40">
-                    {formatTime(e.ts)} · {e.domain || 'unknown'}
+                  <span
+                    className={`mt-0.5 flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold ${EVENT_COLOR[e.type]}`}
+                  >
+                    <Icon className="h-3 w-3" aria-hidden />
+                    {EVENT_LABEL[e.type]}
+                  </span>
+                  <div className="min-w-0">
+                    <div className="truncate text-emerald-50">{e.detail}</div>
+                    <div className="text-[10px] text-emerald-200/40">
+                      {formatTime(e.ts)} · {e.domain || 'unknown'}
+                    </div>
                   </div>
-                </div>
-              </li>
+                </li>
               );
             })}
           </ul>
