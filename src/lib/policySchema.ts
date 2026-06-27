@@ -2,21 +2,17 @@
  * コンソールから配信された復号済みポリシー JSON の検証（DOM/Chrome 非依存）。
  *
  * 復号後の `unknown` を、安全にマージ可能な `Partial<KibaSettings>` へ絞り込む。
- * `any` は使わず、各フィールドを型ガードで検証する。不正な構造は丸ごと破棄
- * （null を返し、呼び出し側はローカル既定を維持する）。
+ * 検証は Zod による宣言的スキーマで行い、`any` は使わない。不正な構造は丸ごと
+ * 破棄（null を返し、呼び出し側はローカル既定を維持する）。
  *
  * 重要: 資格情報（ssoCredentials は別経路＝credentialBroker）とローカル専有の
  * auditLog はマージ対象から除外する。コンソールが誤って送っても取り込まない。
+ * スキーマにこれらのキーを定義しないため、Zod のデフォルト（未知キーは strip）で
+ * 自動的に落ちる。
  */
 
-import type {
-  KibaAuthState,
-  KibaMode,
-  KibaSettings,
-  OfflineStrategy,
-  TenantProvider,
-  TenantWhitelistEntry,
-} from '../types';
+import { z } from 'zod';
+import type { KibaAuthState, KibaSettings, TenantWhitelistEntry } from '../types';
 
 /**
  * ポリシーパッチ。KibaSettings の浅い部分集合だが、auth だけは部分更新を許すため
@@ -26,75 +22,93 @@ export type PolicyPatch = Partial<Omit<KibaSettings, 'auth'>> & {
   auth?: Partial<KibaAuthState>;
 };
 
-/** unknown を string キーの辞書として安全に扱うための型ガード。 */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
+/* ------------------------------------------------------------------ *
+ * Zod スキーマ定義
+ *
+ * 型の真実源は src/types/index.ts の interface。ここではそれらを「検証する」
+ * ためのスキーマのみを定義し、二重管理を避けるため z.infer での型再生成は
+ * しない（各スキーマはトップレベル interface のサブセットと構造的に一致する）。
+ * ------------------------------------------------------------------ */
 
-function isKibaMode(value: unknown): value is KibaMode {
-  return value === 'ENFORCE' || value === 'DRY_RUN';
-}
+const tenantProviderSchema = z.enum(['slack', 'google', 'github', 'unknown']);
+const kibaModeSchema = z.enum(['ENFORCE', 'DRY_RUN']);
+const offlineStrategySchema = z.enum(['LOCKDOWN', 'FAIL_OPEN']);
 
-function isOfflineStrategy(value: unknown): value is OfflineStrategy {
-  return value === 'LOCKDOWN' || value === 'FAIL_OPEN';
-}
+/** テナントホワイトリスト 1 件。 */
+const tenantEntrySchema = z.object({
+  provider: tenantProviderSchema,
+  tenantId: z.string(),
+  label: z.string(),
+}) satisfies z.ZodType<TenantWhitelistEntry>;
 
-function isTenantProvider(value: unknown): value is TenantProvider {
-  return value === 'slack' || value === 'google' || value === 'github' || value === 'unknown';
-}
+/**
+ * auth の部分更新スキーマ。来たサブフィールド（offlineStrategy / ssoTtlExpiresAt）
+ * のみを採用する。idToken はコンソール経由では受け取らない（ここに定義しない）。
+ */
+const authPatchSchema = z
+  .object({
+    offlineStrategy: offlineStrategySchema.optional(),
+    ssoTtlExpiresAt: z.number().nullable().optional(),
+  })
+  .strip();
 
-/** テナントホワイトリスト 1 件を検証する。 */
-function parseTenantEntry(value: unknown): TenantWhitelistEntry | null {
-  if (!isRecord(value)) return null;
-  if (!isTenantProvider(value.provider)) return null;
-  if (typeof value.tenantId !== 'string') return null;
-  if (typeof value.label !== 'string') return null;
-  return { provider: value.provider, tenantId: value.tenantId, label: value.label };
+/**
+ * トップレベルの各フィールド（auth を除く）の検証スキーマ。フィールド単位で
+ * safeParse することで、1 フィールドの型不一致が他フィールドの採用を妨げない
+ * という旧 `typeof` ガードのパッチ意味論を再現する。
+ *
+ * tenantWhitelist は配列全体を 1 スキーマで検証するため、1 件でも不正なら
+ * フィールドごと失敗扱いとなり結果から落ちる（= 旧 every() と同値）。
+ */
+const fieldSchemas = {
+  antiClickFixEnabled: z.boolean(),
+  maskEnabled: z.boolean(),
+  ssoEnabled: z.boolean(),
+  auditExtensionsEnabled: z.boolean(),
+  mode: kibaModeSchema,
+  tenantWhitelist: z.array(tenantEntrySchema),
+} as const;
+
+/** undefined の値を持つキーを取り除いた浅いコピーを返す。 */
+function pruneUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
+  const out: Partial<T> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) out[key as keyof T] = value as T[keyof T];
+  }
+  return out;
 }
 
 /**
- * 復号済みポリシーペイロードを検証し、マージ可能なパッチを返す。1 つも有効な
- * フィールドが無い場合も空オブジェクトではなく、構造自体が不正なら null を返す。
+ * 復号済みポリシーペイロードを検証し、マージ可能なパッチを返す。構造自体が不正
+ * （オブジェクトでない等）なら null を返す。個々のフィールドは型が合致したものだけ
+ * を採用し、合致しないフィールドは黙って捨てる（フェイルセーフ）。
  */
 export function parsePolicyPayload(raw: unknown): PolicyPatch | null {
-  if (!isRecord(raw)) return null;
+  // 全体のパースは緩く: トップが非オブジェクトなら null、それ以外は各フィールドを
+  // 個別に safeParse して「通ったものだけ」採用する。これにより 1 フィールドの
+  // 型不一致で全体を捨てる事故を避けつつ、旧実装の挙動を再現する。
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return null;
 
+  const source = raw as Record<string, unknown>;
   const patch: PolicyPatch = {};
 
-  if (typeof raw.antiClickFixEnabled === 'boolean') {
-    patch.antiClickFixEnabled = raw.antiClickFixEnabled;
-  }
-  if (typeof raw.maskEnabled === 'boolean') {
-    patch.maskEnabled = raw.maskEnabled;
-  }
-  if (typeof raw.ssoEnabled === 'boolean') {
-    patch.ssoEnabled = raw.ssoEnabled;
-  }
-  if (typeof raw.auditExtensionsEnabled === 'boolean') {
-    patch.auditExtensionsEnabled = raw.auditExtensionsEnabled;
-  }
-  if (isKibaMode(raw.mode)) {
-    patch.mode = raw.mode;
-  }
-
-  if (Array.isArray(raw.tenantWhitelist)) {
-    const entries = raw.tenantWhitelist.map(parseTenantEntry);
-    // 1 件でも不正が混じる配列は信用せず丸ごと破棄する。
-    if (entries.every((e): e is TenantWhitelistEntry => e !== null)) {
-      patch.tenantWhitelist = entries;
+  // フィールドごとに schema で検証し、型が合致したものだけ採用する。
+  for (const [key, schema] of Object.entries(fieldSchemas)) {
+    if (!(key in source)) continue;
+    const result = schema.safeParse(source[key]);
+    if (result.success) {
+      // key は fieldSchemas のキーなので PolicyPatch の対応プロパティと一致する。
+      (patch as Record<string, unknown>)[key] = result.data;
     }
   }
 
-  // auth は部分更新を許す（来たサブフィールドのみ含める。合成は呼び出し側）。
-  if (isRecord(raw.auth)) {
-    const auth: Partial<KibaAuthState> = {};
-    if (isOfflineStrategy(raw.auth.offlineStrategy)) {
-      auth.offlineStrategy = raw.auth.offlineStrategy;
+  // auth は部分更新。来た有効サブフィールドのみを採用し、0 件なら含めない。
+  if ('auth' in source) {
+    const result = authPatchSchema.safeParse(source.auth);
+    if (result.success) {
+      const auth = pruneUndefined(result.data);
+      if (Object.keys(auth).length > 0) patch.auth = auth;
     }
-    if (raw.auth.ssoTtlExpiresAt === null || typeof raw.auth.ssoTtlExpiresAt === 'number') {
-      auth.ssoTtlExpiresAt = raw.auth.ssoTtlExpiresAt;
-    }
-    if (Object.keys(auth).length > 0) patch.auth = auth;
   }
 
   return patch;
