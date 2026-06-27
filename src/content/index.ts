@@ -76,6 +76,13 @@ function stop(key: keyof typeof teardowns): void {
  * that are enabled and stops the ones that have been turned off.
  */
 function reconcile(s: KibaSettings | null): void {
+  // Global kill-switch: enabled=false stops all plugins immediately.
+  if (s?.enabled === false) {
+    stop('pasteGuard');
+    stop('ssoFiller');
+    return;
+  }
+
   // Paste guard: anti-ClickFix block and/or confidential masking.
   if (pasteGuardWanted(s)) {
     start('pasteGuard', () => initPasteGuard(getCurrentSettings));
