@@ -17,6 +17,14 @@ import { notify, showRequestBypassModal } from './overlay';
 const HOSTNAME = window.location.hostname;
 
 /**
+ * Grant ids already consumed in *this* tab/frame. Updated synchronously the
+ * moment a grant is honored so a second change/drop event in the same tab is
+ * blocked immediately, before the async setSettings write + storage.onChanged
+ * round-trip refreshes the cached settings (closes the TOCTOU window).
+ */
+const consumedGrantIds = new Set<string>();
+
+/**
  * Registers the capture-phase change/drop handlers. `getSettings` is a
  * synchronous getter returning the cached settings (or null before load) used
  * to read the enforcement mode. Returns a teardown function.
@@ -50,8 +58,12 @@ export function initFileGater(getSettings: () => KibaSettings | null): () => voi
     // the upload succeeds on the *first* selection — no preventDefault, no
     // "re-select your file" round trip.
     const grant = settings?.oneTimeBypass ?? null;
-    if (grant && isBypassValid(grant, HOSTNAME)) {
-      // Let the event proceed untouched; consume the token asynchronously.
+    if (grant && isBypassValid(grant, HOSTNAME) && !consumedGrantIds.has(grant.id)) {
+      // Mark consumed synchronously so a second change event in this tab is
+      // blocked immediately, before the async write below lands. Then let the
+      // original event proceed untouched and persist the consumed grant for
+      // cross-tab consistency.
+      consumedGrantIds.add(grant.id);
       void setSettings({ oneTimeBypass: consumeBypass(grant) });
       notify('kiba.crx', 'One-Time Upload allowed and consumed.');
       return;
@@ -91,7 +103,8 @@ export function initFileGater(getSettings: () => KibaSettings | null): () => voi
 
     void readSettings().then(async (current) => {
       const grant = current.oneTimeBypass;
-      if (grant && isBypassValid(grant, HOSTNAME)) {
+      if (grant && isBypassValid(grant, HOSTNAME) && !consumedGrantIds.has(grant.id)) {
+        consumedGrantIds.add(grant.id);
         await setSettings({ oneTimeBypass: consumeBypass(grant) });
         notify('kiba.crx', 'One-Time drop allowed and consumed. Please drop the file again.');
         return;

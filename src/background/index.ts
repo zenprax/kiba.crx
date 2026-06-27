@@ -24,6 +24,7 @@ import {
   initCredentialBroker,
 } from './credentialBroker';
 import { initBypassManager, requestBypass } from './bypassManager';
+import { buildDomainRules } from './domainRules';
 import { CONSOLE_CONFIG } from '../lib/consoleClient';
 
 /** content → background: OS 通知の依頼。 */
@@ -135,10 +136,6 @@ async function applyNetworkFilterState(enabled: boolean): Promise<void> {
 void getSettings().then((s) => applyNetworkFilterState(s.networkFilterEnabled));
 
 // Sync user-defined block/allowlist domains to dynamic declarativeNetRequest rules.
-// Block rules use IDs starting at 10000; allow rules use IDs starting at 20000.
-const BLOCK_RULE_BASE_ID = 10000;
-const ALLOW_RULE_BASE_ID = 20000;
-
 async function applyDynamicDomainRules(
   blockDomains: string[],
   allowlist: string[],
@@ -154,22 +151,13 @@ async function applyDynamicDomainRules(
     chrome.declarativeNetRequest.ResourceType.IMAGE,
   ];
 
-  const addRules: chrome.declarativeNetRequest.Rule[] = [
-    ...blockDomains.map((domain, i) => ({
-      id: BLOCK_RULE_BASE_ID + i,
-      priority: 1,
-      action: { type: chrome.declarativeNetRequest.RuleActionType.BLOCK },
-      condition: { urlFilter: `*${domain}*`, resourceTypes },
-    })),
-    ...allowlist.map((domain, i) => ({
-      id: ALLOW_RULE_BASE_ID + i,
-      priority: 10,
-      action: { type: chrome.declarativeNetRequest.RuleActionType.ALLOW },
-      condition: { urlFilter: `*${domain}*`, resourceTypes },
-    })),
-  ];
+  const addRules = buildDomainRules(blockDomains, allowlist, resourceTypes);
 
-  await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds, addRules });
+  try {
+    await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds, addRules });
+  } catch (err) {
+    console.error('[kiba.crx] Failed to update dynamic domain rules', err);
+  }
 }
 
 void getSettings().then((s) =>
