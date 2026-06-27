@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Cloud, Languages, Building2, Plus, X } from 'lucide-react';
+import { Cloud, Languages, Building2, Plus, X, KeyRound, Lock, CheckCircle2 } from 'lucide-react';
 import type { KibaSettings, TenantWhitelistEntry } from '../../types';
 import type { TenantProvider } from '../../types';
 import { Card } from '../Popup';
@@ -39,8 +39,8 @@ export function Settings({ settings, isManaged, onUpdateSettings }: SettingsProp
         </div>
       </Card>
 
-      {/* Cloud sync settings (personal/non-managed only) */}
-      {!isManaged && <CloudSyncCard />}
+      {/* Cloud sync settings. Visible even when managed, but locked down. */}
+      <CloudSyncCard isManaged={isManaged} />
 
       {/* Trusted tenant manager */}
       <TenantManagerCard
@@ -52,28 +52,91 @@ export function Settings({ settings, isManaged, onUpdateSettings }: SettingsProp
   );
 }
 
-function CloudSyncCard() {
+/** popup ← 模擬 OAuth ポータルからの承認シグナル。 */
+interface OAuthMockMessage {
+  source: 'kiba-oauth';
+  status: 'success';
+}
+
+function isOAuthMockMessage(data: unknown): data is OAuthMockMessage {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    (data as { source?: unknown }).source === 'kiba-oauth' &&
+    (data as { status?: unknown }).status === 'success'
+  );
+}
+
+/** ランダムな 32 バイトの模擬復号鍵を Base64 で生成する。 */
+function generateMockKey(): string {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  let binary = '';
+  for (const b of bytes) binary += String.fromCharCode(b);
+  return btoa(binary);
+}
+
+type ConnectStatus = 'idle' | 'connecting' | 'connected';
+
+/** Lock アイコン付きの「組織ポリシーで読み取り専用」警告バナー。 */
+function ManagedNote({ text }: { text: string }) {
+  return (
+    <div className="mt-zp-2 flex items-center gap-zp-2 rounded-zp-lg border border-border-default bg-bg-surface px-zp-3 py-zp-2 text-zp-sm font-semibold text-brand-primary">
+      <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden />
+      <span>{text}</span>
+    </div>
+  );
+}
+
+function CloudSyncCard({ isManaged }: { isManaged: boolean }) {
   const t = useLang();
-  const [policyId, setPolicyId] = useState('');
-  const [decryptionKey, setDecryptionKey] = useState('');
-  const [saved, setSaved] = useState(false);
+  const [status, setStatus] = useState<ConnectStatus>('idle');
 
   useEffect(() => {
-    void chrome.storage.local.get(['customPolicyId', 'decryptionKey']).then((v) => {
-      if (typeof v.customPolicyId === 'string') setPolicyId(v.customPolicyId);
-      if (typeof v.decryptionKey === 'string') setDecryptionKey(v.decryptionKey);
+    void chrome.storage.local.get('customPolicyId').then((v) => {
+      if (typeof v.customPolicyId === 'string' && v.customPolicyId.length > 0) {
+        setStatus('connected');
+      }
     });
   }, []);
 
-  async function save() {
-    await chrome.storage.local.set({
-      customPolicyId: policyId.trim(),
-      decryptionKey: decryptionKey.trim(),
-    });
-    await chrome.runtime.sendMessage({ kind: 'kiba:request-sync' });
-    setSaved(true);
-    window.setTimeout(() => setSaved(false), 2000);
+  function handleConnect() {
+    if (isManaged) return;
+    setStatus('connecting');
+
+    const portal = window.open(
+      chrome.runtime.getURL('oauth-mock.html'),
+      'zenprax-cloud-auth',
+      'width=440,height=620',
+    );
+
+    const onMessage = async (event: MessageEvent<unknown>) => {
+      if (!isOAuthMockMessage(event.data)) return;
+      window.removeEventListener('message', onMessage);
+
+      // 認証成功シグナル受領 → ID/鍵を自動生成して保存し、即時同期する。
+      const customPolicyId = crypto.randomUUID();
+      const decryptionKey = generateMockKey();
+      await chrome.storage.local.set({ customPolicyId, decryptionKey });
+      await chrome.runtime.sendMessage({ kind: 'kiba:request-sync' });
+      setStatus('connected');
+    };
+
+    window.addEventListener('message', onMessage);
+
+    // ポータルがキャンセル/クローズされた場合に idle へ戻すための監視。
+    if (portal) {
+      const timer = window.setInterval(() => {
+        if (portal.closed) {
+          window.clearInterval(timer);
+          window.removeEventListener('message', onMessage);
+          setStatus((prev) => (prev === 'connecting' ? 'idle' : prev));
+        }
+      }, 500);
+    }
   }
+
+  const connected = status === 'connected';
+  const connecting = status === 'connecting';
 
   return (
     <Card>
@@ -81,36 +144,31 @@ function CloudSyncCard() {
         <Cloud className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden />
         <div className="text-zp-base font-semibold">{t.settings.cloudSync}</div>
       </div>
-      <div className="mt-zp-1 text-zp-md text-text-muted">{t.settings.cloudSyncDesc}</div>
+      <div className="mt-zp-1 text-zp-md text-text-muted">
+        {connected ? t.settings.connectedDesc : t.settings.cloudSyncDesc}
+      </div>
 
-      <label className="mt-zp-3 block text-zp-sm font-semibold uppercase tracking-wide text-text-muted">
-        {t.settings.policyIdLabel}
-      </label>
-      <input
-        type="text"
-        value={policyId}
-        onChange={(e) => setPolicyId(e.target.value)}
-        placeholder="00000000-0000-0000-0000-000000000000"
-        className="mt-zp-1 w-full rounded-zp-lg border border-input-border bg-bg-surface px-zp-2 py-zp-2 font-mono text-zp-md text-text-primary placeholder:text-text-muted focus:border-input-focus focus:outline-none"
-      />
-
-      <label className="mt-zp-3 block text-zp-sm font-semibold uppercase tracking-wide text-text-muted">
-        {t.settings.decryptionKeyLabel}
-      </label>
-      <input
-        type="password"
-        value={decryptionKey}
-        onChange={(e) => setDecryptionKey(e.target.value)}
-        placeholder="Base64 encoded AES-GCM key"
-        className="mt-zp-1 w-full rounded-zp-lg border border-input-border bg-bg-surface px-zp-2 py-zp-2 font-mono text-zp-md text-text-primary placeholder:text-text-muted focus:border-input-focus focus:outline-none"
-      />
+      {connected && (
+        <div className="mt-zp-3 flex items-center gap-zp-2 rounded-zp-lg bg-bg-base/60 px-zp-3 py-zp-2 text-zp-md font-semibold text-status-warn-text">
+          <CheckCircle2 className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden />
+          <span className="text-text-primary">{t.settings.connected}</span>
+        </div>
+      )}
 
       <button
-        onClick={() => void save()}
-        className="mt-zp-3 w-full rounded-zp-lg bg-brand-hover px-zp-3 py-zp-2 text-zp-base font-semibold text-text-on-brand transition hover:brightness-110"
+        onClick={handleConnect}
+        disabled={isManaged || connecting}
+        className="mt-zp-3 flex w-full items-center justify-center gap-zp-2 rounded-zp-lg bg-brand-hover px-zp-3 py-zp-2 text-zp-base font-semibold text-text-on-brand transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
       >
-        {saved ? 'Saved — Syncing…' : 'Save & Sync'}
+        <KeyRound className="h-4 w-4" aria-hidden />
+        {connecting
+          ? t.settings.connecting
+          : connected
+            ? t.settings.reconnectButton
+            : t.settings.connectButton}
       </button>
+
+      {isManaged && <ManagedNote text={t.settings.managedNote} />}
     </Card>
   );
 }
@@ -151,7 +209,7 @@ function TenantManagerCard({ entries, isManaged, onUpdateSettings }: TenantManag
       </div>
 
       {isManaged ? (
-        <div className="mt-zp-2 text-zp-sm text-text-muted">{t.tenantManager.managedNote}</div>
+        <ManagedNote text={t.tenantManager.managedNote} />
       ) : (
         <div className="mt-zp-3 space-y-zp-2">
           <label className="block text-zp-sm font-semibold uppercase tracking-wide text-text-muted">

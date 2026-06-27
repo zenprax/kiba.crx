@@ -17,35 +17,12 @@ import { notify, showRequestBypassModal } from './overlay';
 const HOSTNAME = window.location.hostname;
 
 /**
- * Decides whether an upload on the current domain should be gated and, if so,
- * handles the block/bypass workflow. Returns true if the upload was blocked.
- * `dryRun` only affects logging here; the caller handles preventDefault.
+ * Grant ids already consumed in *this* tab/frame. Updated synchronously the
+ * moment a grant is honored so a second change/drop event in the same tab is
+ * blocked immediately, before the async setSettings write + storage.onChanged
+ * round-trip refreshes the cached settings (closes the TOCTOU window).
  */
-async function handleUploadAttempt(
-  reset: () => void,
-  dryRun: boolean,
-  settings: KibaSettings | null,
-): Promise<boolean> {
-  if (!isRestrictedContext(settings)) return false;
-
-  const current = await readSettings();
-  const grant = current.oneTimeBypass;
-  if (grant && isBypassValid(grant, HOSTNAME)) {
-    // 有効な単回付与を 1 回消費し、このアップロードを通す。
-    await setSettings({ oneTimeBypass: consumeBypass(grant) });
-    notify('kiba.crx', 'One-Time Upload allowed and consumed.');
-    return false;
-  }
-
-  reset();
-  await addAuditLog(
-    'file-block',
-    tagDetail(`Blocked file upload on ${HOSTNAME}`, dryRun),
-    HOSTNAME,
-  );
-  showRequestBypassModal(HOSTNAME);
-  return true;
-}
+const consumedGrantIds = new Set<string>();
 
 /**
  * Registers the capture-phase change/drop handlers. `getSettings` is a
@@ -73,20 +50,35 @@ export function initFileGater(getSettings: () => KibaSettings | null): () => voi
       return;
     }
 
-    // Block synchronously; resolve the async policy decision immediately after.
-    // We optimistically prevent default and only re-allow on bypass.
+    // Unrestricted (trusted-tenant/whitelisted) context: nothing to gate.
+    if (!isRestrictedContext(settings)) return;
+
+    // Synchronous bypass decision against the cached settings. A valid One-Time
+    // grant lets the original change event flow straight through to the host so
+    // the upload succeeds on the *first* selection — no preventDefault, no
+    // "re-select your file" round trip.
+    const grant = settings?.oneTimeBypass ?? null;
+    if (grant && isBypassValid(grant, HOSTNAME) && !consumedGrantIds.has(grant.id)) {
+      // Mark consumed synchronously so a second change event in this tab is
+      // blocked immediately, before the async write below lands. Then let the
+      // original event proceed untouched and persist the consumed grant for
+      // cross-tab consistency.
+      consumedGrantIds.add(grant.id);
+      void setSettings({ oneTimeBypass: consumeBypass(grant) });
+      notify('kiba.crx', 'One-Time Upload allowed and consumed.');
+      return;
+    }
+
+    // No valid bypass (or settings not yet loaded): block, reset, and prompt.
     event.preventDefault();
     event.stopPropagation();
-
-    void handleUploadAttempt(() => {
-      target.value = '';
-    }, false, settings).then((blocked) => {
-      if (!blocked) {
-        // Token consumed: notify the user to retrigger; we cannot replay the
-        // original file selection programmatically from the isolated world.
-        notify('kiba.crx', 'Upload permitted. Please re-select your file to proceed.');
-      }
-    });
+    target.value = '';
+    void addAuditLog(
+      'file-block',
+      tagDetail(`Blocked file upload on ${HOSTNAME}`, false),
+      HOSTNAME,
+    );
+    showRequestBypassModal(HOSTNAME);
   };
 
   const onDrop = (event: DragEvent): void => {
@@ -111,7 +103,8 @@ export function initFileGater(getSettings: () => KibaSettings | null): () => voi
 
     void readSettings().then(async (current) => {
       const grant = current.oneTimeBypass;
-      if (grant && isBypassValid(grant, HOSTNAME)) {
+      if (grant && isBypassValid(grant, HOSTNAME) && !consumedGrantIds.has(grant.id)) {
+        consumedGrantIds.add(grant.id);
         await setSettings({ oneTimeBypass: consumeBypass(grant) });
         notify('kiba.crx', 'One-Time drop allowed and consumed. Please drop the file again.');
         return;

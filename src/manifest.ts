@@ -55,4 +55,12 @@ export default defineManifest({
       },
     ],
   },
+  // 模擬 ZENPRAX Cloud 認可ポータル。popup から window.open で開くため、
+  // 拡張パッケージ内の静的リソースとして全オリジンに公開する。
+  web_accessible_resources: [
+    {
+      resources: ['oauth-mock.html', 'oauth-mock.js'],
+      matches: ['<all_urls>'],
+    },
+  ],
 });

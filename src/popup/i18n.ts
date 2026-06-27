@@ -49,9 +49,13 @@ export const JA: Translations = {
   settings: {
     langTitle: '表示言語',
     cloudSync: 'クラウド同期設定',
-    cloudSyncDesc: 'Zenprax Cloud発行のPolicy IDと復号鍵（BYOK）を入力して同期します。',
-    policyIdLabel: 'Policy ID (UUID)',
-    decryptionKeyLabel: 'Decryption Key (BYOK · Base64)',
+    cloudSyncDesc: 'ボタン1つで ZENPRAX Cloud に安全に接続し、ポリシーと復号鍵を自動同期します。',
+    connectButton: 'ZENPRAX Cloud に接続する',
+    connecting: '接続中…',
+    connected: '接続済み',
+    connectedDesc: 'クラウド同期が有効です。ポリシーは自動的に最新化されます。',
+    reconnectButton: '再接続する',
+    managedNote: '組織ポリシーにより読み取り専用です。',
   },
   tenantManager: {
     title: '信頼テナントの管理',
@@ -163,8 +167,12 @@ export type Translations = {
     langTitle: string;
     cloudSync: string;
     cloudSyncDesc: string;
-    policyIdLabel: string;
-    decryptionKeyLabel: string;
+    connectButton: string;
+    connecting: string;
+    connected: string;
+    connectedDesc: string;
+    reconnectButton: string;
+    managedNote: string;
   };
   managed: string;
   managedTooltip: string;
@@ -220,9 +228,13 @@ export const EN: Translations = {
     langTitle: 'Display Language',
     cloudSync: 'Cloud Sync Settings',
     cloudSyncDesc:
-      'Enter the Policy ID and decryption key (BYOK) issued by Zenprax Cloud to sync.',
-    policyIdLabel: 'Policy ID (UUID)',
-    decryptionKeyLabel: 'Decryption Key (BYOK · Base64)',
+      'Connect to ZENPRAX Cloud in one click to securely sync policies and your decryption key.',
+    connectButton: 'Connect to ZENPRAX Cloud',
+    connecting: 'Connecting…',
+    connected: 'Connected',
+    connectedDesc: 'Cloud sync is active. Policies refresh automatically.',
+    reconnectButton: 'Reconnect',
+    managedNote: 'Read-only under organization policy.',
   },
   tenantManager: {
     title: 'Manage Trusted Tenants',
