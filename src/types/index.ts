@@ -14,7 +14,11 @@ export type AuditEventType =
   | 'paste-mask'
   | 'sso-fill'
   | 'tenant-block'
-  | 'extension-audit';
+  | 'extension-audit'
+  // 未承認ドメインからのダウンロードを一時停止/ブロックした（Download Gater）。
+  | 'download-block'
+  // 画面共有（getDisplayMedia）の要求を監査記録した（best-effort、ブロックはしない）。
+  | 'screen-share';
 
 /** A single local audit-log entry shown in the popup dashboard. */
 export interface AuditLogEntry {
@@ -47,6 +51,29 @@ export interface TenantWhitelistEntry {
   tenantId: string;
   /** Human-readable label shown in the popup. */
   label: string;
+}
+
+/**
+ * ポリシーから配信可能なテナント抽出ルール（プラガブル化）。組み込みの
+ * Slack/Google/GitHub 判定を拡張し、新しい SaaS を再ビルドなしで追加できる。
+ *
+ * セキュリティ: `extract.regex` は信頼できない文字列なので、適用前に必ず
+ * patternCompiler 相当の検証を通してから RegExp 化すること（生 new RegExp 禁止）。
+ */
+export interface TenantRuleDef {
+  /** プロバイダ識別子（例 'slack'）。組み込みの TenantProvider を緩く拡張する。 */
+  provider: string;
+  /** 対象ホスト名のマッチ条件（例 'app.slack.com' / '*.slack.com'）。 */
+  hostMatch: string;
+  /** tenantId をどこからどう抽出するか。 */
+  extract: {
+    /** 抽出元。URL の pathname か hostname。 */
+    source: 'pathname' | 'hostname';
+    /** 抽出用の正規表現（文字列。信頼できないため要検証）。 */
+    regex: string;
+    /** 採用するキャプチャグループ番号。 */
+    group: number;
+  };
 }
 
 /* ------------------------------------------------------------------ *
@@ -266,6 +293,40 @@ export interface KibaSettings {
    * Reserved for future conditional display logic.
    */
   hiddenTabs: TabId[];
+  /**
+   * 機能ごとの enforcement モード上書き（機能単位 DRY_RUN）。
+   * 未指定（または該当機能のキーが無い）場合はグローバルな `mode` にフォールバックする。
+   * 例: ファイルは ENFORCE のままペースト検知だけ DRY_RUN にしたい運用に対応。
+   */
+  featureModes?: Partial<Record<'paste' | 'file' | 'tenant' | 'download', KibaMode>>;
+  /**
+   * OTA 配信される追加パターン（ClickFix 検知・機密マスク）。RegExp は文字列で配信し、
+   * 適用前に必ず検証してから実体化する（信頼しない）。未設定なら組み込みパターンのみ。
+   */
+  customPatterns?: {
+    /** 危険コマンド検知に追加する RegExp ソース文字列の配列。 */
+    danger?: string[];
+    /** 機密マスクに追加するラベル付き RegExp ソース。 */
+    secrets?: { label: string; pattern: string }[];
+  };
+  /**
+   * OTA 配信されるテナント抽出ルール。未設定なら組み込みの Slack/Google/GitHub 判定のみ。
+   */
+  tenantRules?: TenantRuleDef[];
+  /**
+   * Download Gater を有効化するか。未承認ドメインからのダウンロードを一時停止して
+   * 承認フローに乗せる。default false（'downloads' 権限の追加と整合）。
+   */
+  downloadGaterEnabled: boolean;
+  /**
+   * Download Gater でダウンロードを無条件許可するホスト名のリスト（scheme/path なし）。
+   */
+  downloadAllowlist: string[];
+  /**
+   * 画面共有（getDisplayMedia）の監査を有効化するか。best-effort の記録のみで
+   * 共有自体はブロックしない。default false。
+   */
+  screenShareAuditEnabled: boolean;
 }
 
 /** Default settings applied on install and used as a fallback when reading storage. */
@@ -294,6 +355,11 @@ export const DEFAULT_SETTINGS: KibaSettings = {
   userBlockDomains: [],
   filterAllowlist: [],
   hiddenTabs: [],
+  // 機能単位 DRY_RUN / OTA パターン / テナントルールは未設定なら組み込み挙動に
+  // フォールバックするため default では省略する（optional フィールド）。
+  downloadGaterEnabled: false,
+  downloadAllowlist: [],
+  screenShareAuditEnabled: false,
 };
 
 /** Maximum number of audit-log entries retained locally. */

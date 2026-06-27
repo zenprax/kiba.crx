@@ -6,6 +6,8 @@ import {
   KeyRound,
   Building2,
   Puzzle,
+  Download,
+  MonitorPlay,
   type LucideIcon,
 } from 'lucide-react';
 import type { AuditEventType, AuditLogEntry } from '../../types';
@@ -20,6 +22,8 @@ const EVENT_LABEL: Record<AuditEventType, string> = {
   'sso-fill': 'SSO',
   'tenant-block': 'TENANT',
   'extension-audit': 'EXT',
+  'download-block': 'DL',
+  'screen-share': 'SCREEN',
 };
 
 const EVENT_ICON: Record<AuditEventType, LucideIcon> = {
@@ -30,6 +34,8 @@ const EVENT_ICON: Record<AuditEventType, LucideIcon> = {
   'sso-fill': KeyRound,
   'tenant-block': Building2,
   'extension-audit': Puzzle,
+  'download-block': Download,
+  'screen-share': MonitorPlay,
 };
 
 // アラート色は CVSS ベースの深刻度／ステータストークンへ対応づける。
@@ -43,6 +49,9 @@ const EVENT_COLOR: Record<AuditEventType, string> = {
   'sso-fill': 'text-status-info-text bg-status-info-bg',
   'tenant-block': 'text-severity-critical-text bg-severity-critical-bg',
   'extension-audit': 'text-viz-3 bg-bg-surface',
+  // ダウンロードブロック=critical（持ち込みリスク）、画面共有=info（監査のみ）。
+  'download-block': 'text-severity-critical-text bg-severity-critical-bg',
+  'screen-share': 'text-status-info-text bg-status-info-bg',
 };
 
 export function AuditLog({ entries }: { entries: AuditLogEntry[] }) {

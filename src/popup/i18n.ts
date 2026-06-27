@@ -32,6 +32,14 @@ export const JA: Translations = {
     bypassRequest: 'ワンタイム回避を申請',
     networkFilter: 'Threat Intelligence Filter',
     networkFilterDesc: '脅威インテリジェンスに基づくネットワークフィルタリング',
+    quickActions: {
+      title: 'このサイトを操作',
+      desc: '現在開いているサイトをワンクリックで許可／ブロックリストに追加します。',
+      currentSite: '現在のサイト',
+      block: 'ブロック',
+      allow: '許可',
+      noActiveTab: '対象のタブを取得できません。',
+    },
   },
   sso: {
     title: '共有認証情報',
@@ -45,6 +53,22 @@ export const JA: Translations = {
     title: '監査ログ',
     events: '件',
     noEvents: 'セキュリティイベントはまだ記録されていません。',
+    chart: { title: 'イベント内訳', noData: '集計するイベントがありません。' },
+  },
+  download: {
+    title: 'ダウンロード制御',
+    desc: '未承認ドメインからのダウンロードを一時停止し、承認フローに乗せます。',
+    enable: 'Download Gater を有効化',
+    enableDesc: '未承認ドメインからのダウンロードを一時停止して確認します。',
+    allowlistTitle: '許可ドメイン',
+    allowlistDesc: 'これらのドメインからのダウンロードは無条件で許可します。',
+    allowlistPlaceholder: 'files.example.com',
+  },
+  screenShare: {
+    title: '画面共有の監査',
+    desc: '画面共有（getDisplayMedia）の要求を監査ログに記録します。共有自体はブロックしません。',
+    enable: '画面共有の監査を有効化',
+    enableDesc: '画面共有が要求された際に監査ログへ記録します。',
   },
   settings: {
     langTitle: '表示言語',
@@ -123,6 +147,14 @@ export type Translations = {
     bypassRequest: string;
     networkFilter: string;
     networkFilterDesc: string;
+    quickActions: {
+      title: string;
+      desc: string;
+      currentSite: string;
+      block: string;
+      allow: string;
+      noActiveTab: string;
+    };
   };
   sso: {
     title: string;
@@ -132,7 +164,27 @@ export type Translations = {
     noCredentials: string;
     countSynced: (n: number) => string;
   };
-  audit: { title: string; events: string; noEvents: string };
+  audit: {
+    title: string;
+    events: string;
+    noEvents: string;
+    chart: { title: string; noData: string };
+  };
+  download: {
+    title: string;
+    desc: string;
+    enable: string;
+    enableDesc: string;
+    allowlistTitle: string;
+    allowlistDesc: string;
+    allowlistPlaceholder: string;
+  };
+  screenShare: {
+    title: string;
+    desc: string;
+    enable: string;
+    enableDesc: string;
+  };
   filter: {
     title: string;
     blockTitle: string;
@@ -209,6 +261,14 @@ export const EN: Translations = {
     bypassRequest: 'Request One-Time Bypass',
     networkFilter: 'Threat Intelligence Filter',
     networkFilterDesc: 'Network filtering based on threat intelligence feeds',
+    quickActions: {
+      title: 'This Site',
+      desc: 'Add the currently open site to the allow or block list in one click.',
+      currentSite: 'Current site',
+      block: 'Block',
+      allow: 'Allow',
+      noActiveTab: 'Could not read the active tab.',
+    },
   },
   sso: {
     title: 'Shared Credentials',
@@ -223,6 +283,22 @@ export const EN: Translations = {
     title: 'Audit Log',
     events: 'events',
     noEvents: 'No security events recorded yet.',
+    chart: { title: 'Event Breakdown', noData: 'No events to chart yet.' },
+  },
+  download: {
+    title: 'Download Control',
+    desc: 'Pause downloads from unapproved domains and route them through an approval flow.',
+    enable: 'Enable Download Gater',
+    enableDesc: 'Pause downloads from unapproved domains for review.',
+    allowlistTitle: 'Allowed Domains',
+    allowlistDesc: 'Downloads from these domains are always allowed.',
+    allowlistPlaceholder: 'files.example.com',
+  },
+  screenShare: {
+    title: 'Screen Share Audit',
+    desc: 'Record screen-share (getDisplayMedia) requests to the audit log. Sharing itself is not blocked.',
+    enable: 'Enable Screen Share Audit',
+    enableDesc: 'Log to the audit trail when a screen share is requested.',
   },
   settings: {
     langTitle: 'Display Language',

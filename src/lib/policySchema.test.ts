@@ -73,4 +73,70 @@ describe('parsePolicyPayload', () => {
   it('auth に有効なサブフィールドが無ければ auth を含めない', () => {
     expect(parsePolicyPayload({ auth: { offlineStrategy: 'BOGUS' } })).toEqual({});
   });
+
+  it('featureModes は未知の機能キーを strip して既知キーのみ採用する', () => {
+    const patch = parsePolicyPayload({
+      featureModes: { paste: 'DRY_RUN', file: 'ENFORCE', bogus: 'DRY_RUN' },
+    });
+    expect(patch).toEqual({ featureModes: { paste: 'DRY_RUN', file: 'ENFORCE' } });
+  });
+
+  it('featureModes の既知キーに不正なモード値があるとフィールドごと破棄する', () => {
+    // tenant に不正な enum 値 → object パース失敗 → featureModes 全体が落ちる。
+    expect(parsePolicyPayload({ featureModes: { paste: 'DRY_RUN', tenant: 'NOPE' } })).toEqual({});
+  });
+
+  it('customPatterns は長さ上限・件数上限を超えるソースを弾く', () => {
+    const ok = parsePolicyPayload({
+      customPatterns: { danger: ['rm -rf'], secrets: [{ label: 'Token', pattern: 'tok_\\w+' }] },
+    });
+    expect(ok).toEqual({
+      customPatterns: { danger: ['rm -rf'], secrets: [{ label: 'Token', pattern: 'tok_\\w+' }] },
+    });
+
+    // 512 文字を超える RegExp ソースは配列ごと破棄される（フィールド単位 safeParse）。
+    const tooLong = 'a'.repeat(600);
+    expect(parsePolicyPayload({ customPatterns: { danger: [tooLong] } })).toEqual({});
+  });
+
+  it('tenantRules は構造が合致したルールのみ採用する', () => {
+    const patch = parsePolicyPayload({
+      tenantRules: [
+        {
+          provider: 'notion',
+          hostMatch: '*.notion.so',
+          extract: { source: 'pathname', regex: '/([a-z0-9-]+)', group: 1 },
+        },
+      ],
+    });
+    expect(patch).toEqual({
+      tenantRules: [
+        {
+          provider: 'notion',
+          hostMatch: '*.notion.so',
+          extract: { source: 'pathname', regex: '/([a-z0-9-]+)', group: 1 },
+        },
+      ],
+    });
+
+    // source が不正なら配列ごと破棄。
+    expect(
+      parsePolicyPayload({
+        tenantRules: [{ provider: 'x', hostMatch: 'h', extract: { source: 'query', regex: 'r', group: 0 } }],
+      }),
+    ).toEqual({});
+  });
+
+  it('Download Gater / 画面共有監査の真偽値・配列を採用する', () => {
+    const patch = parsePolicyPayload({
+      downloadGaterEnabled: true,
+      downloadAllowlist: ['files.example.com'],
+      screenShareAuditEnabled: true,
+    });
+    expect(patch).toEqual({
+      downloadGaterEnabled: true,
+      downloadAllowlist: ['files.example.com'],
+      screenShareAuditEnabled: true,
+    });
+  });
 });

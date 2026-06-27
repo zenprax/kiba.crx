@@ -12,7 +12,24 @@
  */
 
 import { z } from 'zod';
-import type { KibaAuthState, KibaSettings, TenantWhitelistEntry } from '../types';
+import type {
+  KibaAuthState,
+  KibaSettings,
+  TenantRuleDef,
+  TenantWhitelistEntry,
+} from '../types';
+
+/**
+ * 信頼できない RegExp ソース文字列の上限（ReDoS 緩和の一次防衛）。
+ * 実体化時には別途 patternCompiler が構造検証する。ここは粗いゲートのみ。
+ */
+const MAX_PATTERN_LEN = 512;
+/** OTA で配信できるカスタムパターン件数の上限（種別ごと）。 */
+const MAX_CUSTOM_PATTERNS = 64;
+/** OTA で配信できるテナントルール件数の上限。 */
+const MAX_TENANT_RULES = 128;
+
+const patternSourceSchema = z.string().min(1).max(MAX_PATTERN_LEN);
 
 /**
  * ポリシーパッチ。KibaSettings の浅い部分集合だが、auth だけは部分更新を許すため
@@ -41,6 +58,41 @@ const tenantEntrySchema = z.object({
   label: z.string(),
 }) satisfies z.ZodType<TenantWhitelistEntry>;
 
+/** 機能単位 DRY_RUN の上書きマップ。来た機能キーのみ採用する。 */
+const featureModesSchema = z
+  .object({
+    paste: kibaModeSchema.optional(),
+    file: kibaModeSchema.optional(),
+    tenant: kibaModeSchema.optional(),
+    download: kibaModeSchema.optional(),
+  })
+  .strip();
+
+/**
+ * OTA 配信のカスタムパターン群。RegExp ソースは長さ・件数を上限化する
+ * （ReDoS 緩和の一次防衛。構造検証は実体化時の patternCompiler が担う）。
+ */
+const customPatternsSchema = z
+  .object({
+    danger: z.array(patternSourceSchema).max(MAX_CUSTOM_PATTERNS).optional(),
+    secrets: z
+      .array(z.object({ label: z.string().min(1), pattern: patternSourceSchema }))
+      .max(MAX_CUSTOM_PATTERNS)
+      .optional(),
+  })
+  .strip();
+
+/** OTA 配信のテナント抽出ルール 1 件。 */
+const tenantRuleSchema = z.object({
+  provider: z.string().min(1),
+  hostMatch: z.string().min(1),
+  extract: z.object({
+    source: z.enum(['pathname', 'hostname']),
+    regex: patternSourceSchema,
+    group: z.number().int().nonnegative(),
+  }),
+}) satisfies z.ZodType<TenantRuleDef>;
+
 /**
  * auth の部分更新スキーマ。来たサブフィールド（offlineStrategy / ssoTtlExpiresAt）
  * のみを採用する。idToken はコンソール経由では受け取らない（ここに定義しない）。
@@ -68,6 +120,13 @@ const fieldSchemas = {
   mode: kibaModeSchema,
   tenantWhitelist: z.array(tenantEntrySchema),
   networkFilterEnabled: z.boolean(),
+  // --- 拡張機能群が OTA 配信する新フィールド（基盤ブランチで一括登録） ---
+  featureModes: featureModesSchema,
+  customPatterns: customPatternsSchema,
+  tenantRules: z.array(tenantRuleSchema).max(MAX_TENANT_RULES),
+  downloadGaterEnabled: z.boolean(),
+  downloadAllowlist: z.array(z.string()),
+  screenShareAuditEnabled: z.boolean(),
 } as const;
 
 /** undefined の値を持つキーを取り除いた浅いコピーを返す。 */
