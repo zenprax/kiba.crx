@@ -13,6 +13,7 @@ import {
 import type { AuditEventType, AuditLogEntry } from '../../types';
 import { Card } from '../Popup';
 import { useLang } from '../i18n';
+import { AuditChart } from './AuditChart';
 
 const EVENT_LABEL: Record<AuditEventType, string> = {
   'paste-block': 'PASTE',
@@ -59,6 +60,7 @@ export function AuditLog({ entries }: { entries: AuditLogEntry[] }) {
 
   return (
     <div className="space-y-zp-3">
+      <AuditChart entries={entries} />
       <Card>
         <div className="flex items-center justify-between">
           <div className="text-zp-base font-semibold">{t.audit.title}</div>
