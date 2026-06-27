@@ -154,6 +154,7 @@ export function Popup() {
             onToggleSso={toggleSso}
             onToggleNetworkFilter={toggleNetworkFilter}
             onGrantBypass={grantBypass}
+            onUpdateSettings={updateSettings}
           />
         )}
         {activeTab === 'filter' && (
