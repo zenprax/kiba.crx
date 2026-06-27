@@ -18,6 +18,8 @@ import { isDryRunFor, tagDetail } from '../lib/dryRun';
 import {
   describeMask,
   describePasteThreat,
+  getActiveDangerPatterns,
+  getActiveSecretPatterns,
   isDangerousPaste,
   sanitizePaste,
 } from '../lib/patterns';
@@ -43,9 +45,9 @@ export function initPasteGuard(getSettings: () => KibaSettings | null): () => vo
 
     const selectedText = window.getSelection()?.toString() ?? '';
 
-    // Stage 1: dangerous OS commands are always fully blocked. Gated by the
-    // 'paste' feature mode (falls back to the global mode).
-    if (isDangerousPaste(selectedText)) {
+    // Stage 1: dangerous OS commands are always fully blocked. 組み込み + OTA
+    // カスタムの危険パターンで照合し、'paste' 機能モード（未設定時は全体 mode）に従う。
+    if (isDangerousPaste(selectedText, getActiveDangerPatterns(settings))) {
       const dryRun = isDryRunFor(settings, 'paste');
       const detail = tagDetail(describePasteThreat(selectedText), dryRun);
       if (dryRun) {
@@ -68,7 +70,7 @@ export function initPasteGuard(getSettings: () => KibaSettings | null): () => vo
     const maskEnabled = settings?.maskEnabled ?? true;
     if (!maskEnabled || !isRestrictedContext(settings)) return;
 
-    const result = sanitizePaste(selectedText);
+    const result = sanitizePaste(selectedText, getActiveSecretPatterns(settings));
     if (!result.masked) return;
 
     const dryRun = isDryRunFor(settings, 'tenant');

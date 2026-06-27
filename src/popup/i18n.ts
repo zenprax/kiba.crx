@@ -130,6 +130,9 @@ export const JA: Translations = {
       'bash -c',
       '/bin/bash / /bin/sh',
     ],
+    customTitle: '組織配信のカスタムパターン',
+    customDesc: '管理ポリシーで追加配信された検知パターンです。',
+    noCustom: 'カスタムパターンはありません。',
   },
   managed: '組織のポリシーで管理されています',
   managedTooltip: '管理者ポリシーにより設定は読み取り専用です。',
@@ -214,6 +217,9 @@ export type Translations = {
     title: string;
     desc: string;
     patterns: string[];
+    customTitle: string;
+    customDesc: string;
+    noCustom: string;
   };
   tenantManager: {
     title: string;
@@ -382,6 +388,9 @@ export const EN: Translations = {
       'bash -c',
       '/bin/bash / /bin/sh',
     ],
+    customTitle: 'Org-Delivered Custom Patterns',
+    customDesc: 'Detection patterns delivered by your administrator policy.',
+    noCustom: 'No custom patterns.',
   },
   managed: 'Managed by your organization',
   managedTooltip: 'Settings are enforced by an administrator policy and are read-only on this device.',
