@@ -93,7 +93,7 @@ npm test         # Vitest ユニットテストの実行
 
 kiba.crx が通信するエンドポイントを透明性のために公開しています：
 
-- [Kiba Policy Delivery API](https://zenprax.github.io/kiba.crx/docs/) — OpenAPI仕様（GitHub Pages）
+- [Kiba Policy Delivery API](https://zenprax.github.io/kiba.crx/) — OpenAPI仕様（GitHub Pages）
 
 ## ライセンス
 

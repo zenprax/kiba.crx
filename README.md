@@ -106,7 +106,7 @@ npm test         # Run Vitest unit tests
 
 The endpoints that kiba.crx communicates with are documented publicly for transparency:
 
-- [Kiba Policy Delivery API](https://zenprax.github.io/kiba.crx/docs/) — OpenAPI specification (GitHub Pages)
+- [Kiba Policy Delivery API](https://zenprax.github.io/kiba.crx/) — OpenAPI specification (GitHub Pages)
 
 ## License
 
