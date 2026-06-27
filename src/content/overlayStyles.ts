@@ -111,6 +111,64 @@ export const OVERLAY_CSS = `
   background: var(--zp-interactive-hover);
 }
 
+/* ------------------------------------------------------------------ *
+ * Toast 表示（DangerOverlay 用）: 暗幕なしで画面右下に出す。裏の情報を
+ * 確認しながら閲覧できる。scrim を持たないため pointer-events も背面に通す。
+ * ------------------------------------------------------------------ */
+.kiba-toast-root {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  padding: var(--zp-space-card-x);
+  pointer-events: none; /* 背面のページ操作を妨げない */
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+}
+
+.kiba-toast-root .kiba-card {
+  pointer-events: auto; /* カード自体は操作可能 */
+  animation: kiba-slide-in 160ms ease-out;
+}
+
+/* ------------------------------------------------------------------ *
+ * ドラッグ可能ヘッダ（RequestBypassModal 用）。
+ * ------------------------------------------------------------------ */
+.kiba-card__drag {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: calc(-1 * var(--zp-space-card-y)) calc(-1 * var(--zp-space-card-x))
+    var(--zp-space-title-gap);
+  padding: var(--zp-space-badge-y) var(--zp-space-card-x);
+  cursor: grab;
+  border-bottom: 1px solid var(--zp-border-default);
+  user-select: none;
+  touch-action: none;
+}
+
+.kiba-card__drag:active {
+  cursor: grabbing;
+}
+
+.kiba-card__drag-dots {
+  color: var(--zp-text-muted);
+  letter-spacing: 0.15em;
+  font-weight: 700;
+}
+
+@keyframes kiba-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @keyframes kiba-fade-in {
   from {
     opacity: 0;

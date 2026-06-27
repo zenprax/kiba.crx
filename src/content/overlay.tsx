@@ -10,7 +10,13 @@
  * シグネチャは従来どおりで、呼び出し側（pasteGuard / fileGater）は無改修。
  */
 
-import { StrictMode, type ReactNode } from 'react';
+import {
+  StrictMode,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+  type ReactNode,
+} from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { cssVariables, getTheme } from '@zenprax/design-tokens';
 import { OVERLAY_CSS } from './overlayStyles';
@@ -137,10 +143,13 @@ function render(node: ReactNode): void {
  * React コンポーネント（JSX が自動エスケープするため escapeHtml 不要）
  * ------------------------------------------------------------------ */
 
-/** Non-blocking warning overlay shown when a dangerous paste is blocked. */
+/**
+ * Non-blocking warning toast shown when a dangerous paste is blocked.
+ * 暗幕なしの右下トースト表示にして、裏のページ情報を確認しながら操作できる。
+ */
 function DangerOverlay({ title, body }: { title: string; body: string }) {
   return (
-    <div className="kiba-overlay-root">
+    <div className="kiba-toast-root">
       <div className="kiba-card kiba-card--danger" role="alertdialog" aria-live="assertive">
         <div className="kiba-card__badge">kiba.crx</div>
         <h2 className="kiba-card__title">{title}</h2>
@@ -151,6 +160,65 @@ function DangerOverlay({ title, body }: { title: string; body: string }) {
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/**
+ * ドラッグで移動できるカードラッパ。ヘッダ（kiba-card__drag）を pointerdown して
+ * 動かすと transform で位置を更新する。依存追加なし（React の pointer events のみ）。
+ */
+function DraggableCard({
+  className,
+  role,
+  ariaModal,
+  children,
+}: {
+  className: string;
+  role: string;
+  ariaModal?: boolean;
+  children: ReactNode;
+}) {
+  const [pos, setPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const drag = useRef<{ startX: number; startY: number; baseX: number; baseY: number } | null>(
+    null,
+  );
+
+  const onPointerDown = (e: ReactPointerEvent): void => {
+    drag.current = { startX: e.clientX, startY: e.clientY, baseX: pos.x, baseY: pos.y };
+    (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+  };
+  const onPointerMove = (e: ReactPointerEvent): void => {
+    if (!drag.current) return;
+    setPos({
+      x: drag.current.baseX + (e.clientX - drag.current.startX),
+      y: drag.current.baseY + (e.clientY - drag.current.startY),
+    });
+  };
+  const onPointerUp = (e: ReactPointerEvent): void => {
+    drag.current = null;
+    (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+  };
+
+  return (
+    <div
+      className={className}
+      role={role}
+      aria-modal={ariaModal}
+      style={{ transform: `translate(${pos.x}px, ${pos.y}px)` }}
+    >
+      <div
+        className="kiba-card__drag"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+      >
+        <span className="kiba-card__badge">kiba.crx</span>
+        <span className="kiba-card__drag-dots" aria-hidden>
+          ⠿
+        </span>
+      </div>
+      {children}
     </div>
   );
 }
@@ -176,8 +244,7 @@ function RequestBypassModal({
 
   return (
     <div className="kiba-overlay-root">
-      <div className="kiba-card kiba-card--gated" role="dialog" aria-modal="true">
-        <div className="kiba-card__badge">kiba.crx</div>
+      <DraggableCard className="kiba-card kiba-card--gated" role="dialog" ariaModal>
         <h2 className="kiba-card__title">File Upload Blocked</h2>
         <p className="kiba-card__body">
           Uploads to <strong>{domain}</strong> are restricted by policy. Request a
@@ -191,7 +258,7 @@ function RequestBypassModal({
             Request Demo One-Time Bypass
           </button>
         </div>
-      </div>
+      </DraggableCard>
     </div>
   );
 }
