@@ -27,7 +27,7 @@ export function isWhitelistedDomain(host: string): boolean {
  * tenant whitelist is used in that case.
  */
 export function isRestrictedContext(settings: KibaSettings | null): boolean {
-  const ctx = detectTenant(window.location.href);
+  const ctx = detectTenant(window.location.href, settings?.tenantRules);
   const whitelist = settings?.tenantWhitelist ?? DEFAULT_SETTINGS.tenantWhitelist;
 
   if (ctx.provider === 'unknown') {
