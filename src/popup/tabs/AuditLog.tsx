@@ -32,50 +32,53 @@ const EVENT_ICON: Record<AuditEventType, LucideIcon> = {
   'extension-audit': Puzzle,
 };
 
+// アラート色は CVSS ベースの深刻度／ステータストークンへ対応づける。
+// ブロック系=critical、ファイル/マスク=medium、許可=safe、SSO=info。
+// extension-audit（紫）は専用 severity トークンが無いため viz パレットで代替する。
 const EVENT_COLOR: Record<AuditEventType, string> = {
-  'paste-block': 'text-rose-300 bg-rose-500/10',
-  'file-block': 'text-amber-300 bg-amber-500/10',
-  'bypass-grant': 'text-emerald-300 bg-emerald-500/10',
-  'paste-mask': 'text-amber-300 bg-amber-500/10',
-  'sso-fill': 'text-sky-300 bg-sky-500/10',
-  'tenant-block': 'text-rose-300 bg-rose-500/10',
-  'extension-audit': 'text-violet-300 bg-violet-500/10',
+  'paste-block': 'text-severity-critical-text bg-severity-critical-bg',
+  'file-block': 'text-severity-medium-text bg-severity-medium-bg',
+  'bypass-grant': 'text-status-safe-text bg-status-safe-bg',
+  'paste-mask': 'text-severity-medium-text bg-severity-medium-bg',
+  'sso-fill': 'text-status-info-text bg-status-info-bg',
+  'tenant-block': 'text-severity-critical-text bg-severity-critical-bg',
+  'extension-audit': 'text-viz-3 bg-bg-surface',
 };
 
 export function AuditLog({ entries }: { entries: AuditLogEntry[] }) {
   const t = useLang();
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-zp-3">
       <Card>
         <div className="flex items-center justify-between">
-          <div className="text-sm font-semibold">{t.audit.title}</div>
-          <span className="text-[11px] text-emerald-200/50">
+          <div className="text-zp-base font-semibold">{t.audit.title}</div>
+          <span className="text-zp-sm text-text-muted">
             {entries.length} {t.audit.events}
           </span>
         </div>
         {entries.length === 0 ? (
-          <div className="mt-2 rounded-lg border border-dashed border-emerald-500/15 py-6 text-center text-xs text-emerald-200/40">
+          <div className="mt-zp-2 rounded-zp-lg border border-dashed border-border-default py-zp-6 text-center text-zp-md text-text-muted">
             {t.audit.noEvents}
           </div>
         ) : (
-          <ul className="mt-2 max-h-72 space-y-1.5 overflow-y-auto pr-1">
+          <ul className="mt-zp-2 max-h-72 space-y-1.5 overflow-y-auto pr-1">
             {entries.map((e, i) => {
               const Icon = EVENT_ICON[e.type];
               return (
                 <li
                   key={`${e.ts}-${i}`}
-                  className="flex items-start gap-2 rounded-lg bg-zenprax-950/60 px-2.5 py-2 text-xs"
+                  className="flex items-start gap-zp-2 rounded-zp-lg bg-bg-base/60 px-zp-2 py-zp-2 text-zp-md"
                 >
                   <span
-                    className={`mt-0.5 flex shrink-0 items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-bold ${EVENT_COLOR[e.type]}`}
+                    className={`mt-0.5 flex shrink-0 items-center gap-zp-1 rounded-zp-sm px-zp-1 py-0.5 text-zp-xs font-bold ${EVENT_COLOR[e.type]}`}
                   >
                     <Icon className="h-3 w-3" aria-hidden />
                     {EVENT_LABEL[e.type]}
                   </span>
                   <div className="min-w-0">
-                    <div className="truncate text-emerald-50">{e.detail}</div>
-                    <div className="text-[10px] text-emerald-200/40">
+                    <div className="truncate text-text-primary">{e.detail}</div>
+                    <div className="text-zp-xs text-text-muted">
                       {formatTime(e.ts)} · {e.domain || 'unknown'}
                     </div>
                   </div>
