@@ -72,6 +72,31 @@ describe('detectTenant', () => {
     expect(() => detectTenant('not a url')).not.toThrow();
     expect(detectTenant('not a url')).toEqual({ provider: 'unknown', tenantId: null, hostname: '' });
   });
+
+  it('OTA ルールがマッチすれば組み込み判定より優先する', () => {
+    const rules = [
+      {
+        provider: 'notion',
+        hostMatch: '*.notion.so',
+        extract: { source: 'pathname' as const, regex: '/([a-z0-9-]+)', group: 1 },
+      },
+    ];
+    const ctx = detectTenant('https://app.notion.so/team-x/page', rules);
+    expect(ctx).toEqual({ provider: 'notion', tenantId: 'team-x', hostname: 'app.notion.so' });
+  });
+
+  it('OTA ルールにマッチしなければ組み込み判定にフォールバックする', () => {
+    const rules = [
+      {
+        provider: 'notion',
+        hostMatch: '*.notion.so',
+        extract: { source: 'pathname' as const, regex: '/([a-z0-9]+)', group: 1 },
+      },
+    ];
+    // Slack URL は notion ルールにマッチしないので組み込み Slack 判定が効く。
+    const ctx = detectTenant('https://app.slack.com/client/T0ZENPRAX/C1', rules);
+    expect(ctx).toEqual({ provider: 'slack', tenantId: 'T0ZENPRAX', hostname: 'app.slack.com' });
+  });
 });
 
 describe('isTrustedTenant', () => {

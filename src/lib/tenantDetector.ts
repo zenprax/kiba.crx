@@ -10,7 +10,8 @@
  * Shared types live in ../types to keep the `lib -> types` dependency direction.
  */
 
-import type { TenantProvider, TenantWhitelistEntry } from '../types';
+import type { TenantProvider, TenantRuleDef, TenantWhitelistEntry } from '../types';
+import { detectTenantByRules } from './tenantRules';
 
 /** Result of identifying the tenant context for a given URL. */
 export interface TenantContext {
@@ -67,8 +68,17 @@ export function extractGithubOrg(pathname: string): string | null {
 /**
  * Identifies the tenant context for a URL string. Never throws: invalid input
  * yields `{ provider: 'unknown', tenantId: null, hostname: '' }`.
+ *
+ * `rules`（OTA 配信のテナント抽出ルール）が渡された場合は先にそれを評価し、
+ * いずれかにマッチ（provider !== 'unknown'）すればその結果を返す。マッチしない
+ * 場合は従来の組み込み Slack/Google/GitHub 判定にフォールバックする（後方互換）。
  */
-export function detectTenant(url: string): TenantContext {
+export function detectTenant(url: string, rules?: TenantRuleDef[]): TenantContext {
+  if (rules && rules.length > 0) {
+    const byRule = detectTenantByRules(url, rules);
+    if (byRule.provider !== 'unknown') return byRule;
+  }
+
   let parsed: URL;
   try {
     parsed = new URL(url);
