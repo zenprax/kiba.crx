@@ -1,9 +1,9 @@
 /** @type {import('tailwindcss').Config} */
 export default {
-  content: [
-    './src/popup/**/*.{ts,tsx,html}',
-    './src/content/**/*.{ts,css}',
-  ],
+  // Tailwind is only used by the popup UI. The content-script overlay is styled
+  // with self-contained plain CSS injected into a Shadow Root (overlayStyles.ts),
+  // so it intentionally does not participate in Tailwind generation.
+  content: ['./src/popup/**/*.{ts,tsx,html}'],
   theme: {
     extend: {
       colors: {

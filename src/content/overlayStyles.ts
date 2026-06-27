@@ -1,12 +1,12 @@
 /**
- * Styling for kiba.crx injected warning overlays and the file-bypass modal.
+ * kiba.crx の注入オーバーレイ／ファイルバイパスモーダル用スタイル。
  *
- * These styles are scoped under `.kiba-overlay-root` and use high z-index +
- * explicit values so they render consistently regardless of host-page CSS.
- * Tailwind is intentionally NOT relied on here (host pages don't load our
- * Tailwind build); plain CSS keeps the overlay self-contained.
+ * これらは Shadow Root 内に <style> として注入されるため、ホストページの CSS とは
+ * 完全に隔離される（こちらのスタイルもホストページへ漏れない）。値は明示的に指定し、
+ * 高い z-index と組み合わせてホストページの CSS に依存せず一貫して描画する。
+ * Tailwind は意図的に使わない（ホストページはこちらの Tailwind ビルドを読み込まない）。
  */
-
+export const OVERLAY_CSS = `
 .kiba-overlay-root {
   position: fixed;
   inset: 0;
@@ -125,3 +125,4 @@
     transform: translateY(0) scale(1);
   }
 }
+`;

@@ -32,7 +32,8 @@ export default defineManifest({
     {
       matches: ['<all_urls>'],
       js: ['src/content/index.ts'],
-      css: ['src/content/style.css'],
+      // CSS はオーバーレイの Shadow Root 内に <style> として注入するため、
+      // ここでのグローバル CSS 宣言は不要（ホストページを汚染しない）。
       run_at: 'document_start',
       all_frames: true,
     },
