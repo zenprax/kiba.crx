@@ -2,26 +2,21 @@ import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import * as Switch from '@radix-ui/react-switch';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import { Lock } from 'lucide-react';
-import { type TenantWhitelistEntry } from '../types';
+import { type TabId, type TenantWhitelistEntry } from '../types';
 import { useKibaSettings, useManagedPolicy, useCredentialStatus } from './hooks';
 import { Dashboard } from './tabs/Dashboard';
 import { SsoList } from './tabs/SsoList';
 import { AuditLog } from './tabs/AuditLog';
-
-/** Identifiers for the top-level popup tabs. */
-type TabId = 'dashboard' | 'sso' | 'audit';
+import { Settings } from './tabs/Settings';
+import { type Translations, JA, EN, LangContext } from './i18n';
 
 /** Admin/User local dashboard for kiba.crx. */
 export function Popup() {
   const { settings, loading, updateSettings } = useKibaSettings();
   const [activeTab, setActiveTab] = useState<TabId>('dashboard');
-  // chrome.storage.managed（GPO/MDM）に policyId が配備されているか。
   const managedByPolicy = useManagedPolicy();
-  // 資格情報の同期状態（構成有無・件数のみ。資格情報そのものは受け取らない）。
   const credStatus = useCredentialStatus(settings.ssoEnabled);
 
-  // 管理ロックの実効判定: managed ストレージ or compileActiveSettings が立てた
-  // settings.isManaged のいずれか（OR）。
   const isManaged = managedByPolicy || settings.isManaged;
 
   const blockedCount = useMemo(
@@ -30,18 +25,25 @@ export function Popup() {
     [settings.auditLog],
   );
 
-  // Plugin-style tabs: a tab whose feature is disabled is removed from the DOM.
-  const tabs = useMemo<{ id: TabId; label: string }[]>(() => {
-    const list: { id: TabId; label: string }[] = [{ id: 'dashboard', label: 'Dashboard' }];
-    if (settings.ssoEnabled) list.push({ id: 'sso', label: 'SSO' });
-    list.push({ id: 'audit', label: 'Audit' });
-    return list;
-  }, [settings.ssoEnabled]);
+  const t = settings.language === 'en' ? EN : JA;
 
-  // Fall back to Dashboard when the active tab is no longer available.
+  const tabs = useMemo<{ id: TabId; label: string }[]>(() => {
+    const all: { id: TabId; label: string }[] = [
+      { id: 'dashboard', label: t.tabs.dashboard },
+      { id: 'sso',       label: t.tabs.sso },
+      { id: 'audit',     label: t.tabs.audit },
+      { id: 'settings',  label: t.tabs.settings },
+    ];
+    return all.filter((tab) => !settings.hiddenTabs.includes(tab.id));
+  }, [settings.hiddenTabs, t]);
+
   useEffect(() => {
-    if (!tabs.some((t) => t.id === activeTab)) setActiveTab('dashboard');
+    if (!tabs.some((tab) => tab.id === activeTab)) setActiveTab('dashboard');
   }, [tabs, activeTab]);
+
+  async function toggleEnabled() {
+    await updateSettings({ enabled: !settings.enabled });
+  }
 
   async function toggleAntiClickFix() {
     await updateSettings({ antiClickFixEnabled: !settings.antiClickFixEnabled });
@@ -56,8 +58,6 @@ export function Popup() {
   }
 
   async function grantBypass() {
-    // アクティブタブのホスト名を対象に承認を要求する。承認は background
-    // （bypassManager）に一元化され、付与は onSettingsChanged 経由で反映される。
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab?.url) return;
     const domain = new URL(tab.url).hostname;
@@ -67,6 +67,7 @@ export function Popup() {
   const isDryRun = settings.mode === 'DRY_RUN';
 
   return (
+    <LangContext.Provider value={t}>
     <Tooltip.Provider delayDuration={200}>
     <div className="min-h-[480px] bg-zenprax-950 text-emerald-50 font-sans">
       {/* Status header */}
@@ -85,19 +86,21 @@ export function Popup() {
                 DRY_RUN
               </span>
             )}
-            <StatusPill active={settings.antiClickFixEnabled} />
+            <StatusPill active={settings.enabled} t={t} />
+            <Toggle
+              checked={settings.enabled}
+              disabled={loading || isManaged}
+              onChange={toggleEnabled}
+              label="Global enable"
+            />
           </div>
         </div>
-        <p className="mt-2 text-xs text-emerald-200/70">
-          Edge-based browser security. Blocking risks before they hit the wire.
-        </p>
-        {/* 組織管理下のロックダウンバッジ（読み取り専用であることを明示）。 */}
         {isManaged && (
           <Tooltip.Root>
             <Tooltip.Trigger asChild>
               <div className="mt-3 flex cursor-default items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-[11px] font-semibold text-emerald-300">
                 <Lock className="h-3.5 w-3.5" aria-hidden />
-                Managed by your organization
+                {t.managed}
               </div>
             </Tooltip.Trigger>
             <Tooltip.Portal>
@@ -106,8 +109,7 @@ export function Popup() {
                 sideOffset={6}
                 className="max-w-[280px] rounded-lg border border-emerald-500/20 bg-zenprax-900 px-3 py-2 text-[11px] text-emerald-100 shadow-xl"
               >
-                Settings are enforced by an administrator policy and are read-only
-                on this device.
+                {t.managedTooltip}
                 <Tooltip.Arrow className="fill-zenprax-900" />
               </Tooltip.Content>
             </Tooltip.Portal>
@@ -115,19 +117,19 @@ export function Popup() {
         )}
       </header>
 
-      {/* Tab navigation (plugin-style: disabled features have no tab) */}
+      {/* Tab navigation */}
       <nav className="flex gap-1 border-b border-emerald-500/15 bg-zenprax-900/40 px-3 pt-2">
-        {tabs.map((t) => (
+        {tabs.map((tab) => (
           <button
-            key={t.id}
-            onClick={() => setActiveTab(t.id)}
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
             className={`rounded-t-lg px-3 py-2 text-xs font-semibold transition ${
-              activeTab === t.id
+              activeTab === tab.id
                 ? 'bg-zenprax-950 text-emerald-300'
                 : 'text-emerald-200/50 hover:text-emerald-200'
             }`}
           >
-            {t.label}
+            {tab.label}
           </button>
         ))}
       </nav>
@@ -145,13 +147,21 @@ export function Popup() {
             onGrantBypass={grantBypass}
           />
         )}
-        {activeTab === 'sso' && settings.ssoEnabled && (
+        {activeTab === 'sso' && (
           <SsoList configured={credStatus.configured} count={credStatus.count} />
         )}
         {activeTab === 'audit' && <AuditLog entries={settings.auditLog} />}
+        {activeTab === 'settings' && (
+          <Settings
+            settings={settings}
+            isManaged={isManaged}
+            onUpdateSettings={updateSettings}
+          />
+        )}
       </main>
     </div>
     </Tooltip.Provider>
+    </LangContext.Provider>
   );
 }
 
@@ -159,7 +169,7 @@ export function Popup() {
  * Shared popup-scoped UI primitives (exported for the tab modules).
  * ------------------------------------------------------------------ */
 
-export function StatusPill({ active }: { active: boolean }) {
+export function StatusPill({ active, t }: { active: boolean; t: Translations }) {
   return (
     <span
       className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold ${
@@ -167,7 +177,7 @@ export function StatusPill({ active }: { active: boolean }) {
       }`}
     >
       <span className={`h-1.5 w-1.5 rounded-full ${active ? 'bg-emerald-400' : 'bg-slate-400'}`} />
-      {active ? 'Protected' : 'Paused'}
+      {active ? t.status.protected : t.status.paused}
     </span>
   );
 }
@@ -207,11 +217,8 @@ export function Toggle({
   checked: boolean;
   disabled?: boolean;
   onChange: () => void;
-  /** スクリーンリーダ向けのアクセシブルラベル（視覚ラベルが別要素のとき）。 */
   label?: string;
 }) {
-  // a11y（キーボード操作・role/aria-checked）は Radix に委譲し、見た目は従来の
-  // Tailwind 配色・サム移動を data-[state] セレクタで再現する。
   return (
     <Switch.Root
       checked={checked}
@@ -225,11 +232,11 @@ export function Toggle({
   );
 }
 
-export function TenantList({ entries }: { entries: TenantWhitelistEntry[] }) {
+export function TenantList({ entries, emptyLabel }: { entries: TenantWhitelistEntry[]; emptyLabel: string }) {
   if (entries.length === 0) {
     return (
       <div className="mt-2 rounded-lg border border-dashed border-emerald-500/15 py-3 text-center text-[11px] text-emerald-200/40">
-        No trusted tenants configured.
+        {emptyLabel}
       </div>
     );
   }
