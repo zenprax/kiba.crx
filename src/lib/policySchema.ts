@@ -67,6 +67,7 @@ const fieldSchemas = {
   auditExtensionsEnabled: z.boolean(),
   mode: kibaModeSchema,
   tenantWhitelist: z.array(tenantEntrySchema),
+  networkFilterEnabled: z.boolean(),
 } as const;
 
 /** undefined の値を持つキーを取り除いた浅いコピーを返す。 */

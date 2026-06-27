@@ -202,7 +202,7 @@ export interface KibaMasterPolicy {
  * ------------------------------------------------------------------ */
 
 /** Top-level popup tab identifiers. */
-export type TabId = 'dashboard' | 'sso' | 'audit' | 'settings';
+export type TabId = 'dashboard' | 'filter' | 'anti-clickfix' | 'sso' | 'audit' | 'settings';
 
 /** The complete local policy/configuration state persisted in chrome.storage.local. */
 export interface KibaSettings {
@@ -246,6 +246,22 @@ export interface KibaSettings {
    */
   enabled: boolean;
   /**
+   * When true, the declarativeNetRequest ruleset 'ad_rules' is enabled,
+   * blocking known threat/ad domains. Can be toggled by the user or managed
+   * by a remote policy.
+   */
+  networkFilterEnabled: boolean;
+  /**
+   * User-defined domains to block via dynamic declarativeNetRequest rules.
+   * Each entry is a plain hostname (e.g. "evil.com") without scheme or path.
+   */
+  userBlockDomains: string[];
+  /**
+   * Domains exempt from the declarativeNetRequest block rules (both static
+   * ad_rules and userBlockDomains). Implemented as high-priority allow rules.
+   */
+  filterAllowlist: string[];
+  /**
    * Tab IDs to hide from the popup navigation. Currently always empty.
    * Reserved for future conditional display logic.
    */
@@ -274,6 +290,9 @@ export const DEFAULT_SETTINGS: KibaSettings = {
   auditLog: [],
   language: 'ja',
   enabled: true,
+  networkFilterEnabled: true,
+  userBlockDomains: [],
+  filterAllowlist: [],
   hiddenTabs: [],
 };
 
