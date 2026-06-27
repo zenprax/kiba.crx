@@ -51,6 +51,17 @@ export const JA: Translations = {
     policyIdLabel: 'Policy ID (UUID)',
     decryptionKeyLabel: 'Decryption Key (BYOK · Base64)',
   },
+  tenantManager: {
+    title: '信頼テナントの管理',
+    addButton: '追加',
+    providerLabel: 'プロバイダ',
+    tenantIdLabel: 'テナント ID',
+    tenantIdPlaceholder: 'T0XXXXXXX',
+    labelLabel: 'ラベル',
+    labelPlaceholder: '例: 自社 Slack',
+    removeAriaLabel: 'エントリを削除',
+    managedNote: '組織ポリシーにより読み取り専用です。',
+  },
   managed: '組織のポリシーで管理されています',
   managedTooltip: '管理者ポリシーにより設定は読み取り専用です。',
 } as const;
@@ -88,6 +99,17 @@ export type Translations = {
     countSynced: (n: number) => string;
   };
   audit: { title: string; events: string; noEvents: string };
+  tenantManager: {
+    title: string;
+    addButton: string;
+    providerLabel: string;
+    tenantIdLabel: string;
+    tenantIdPlaceholder: string;
+    labelLabel: string;
+    labelPlaceholder: string;
+    removeAriaLabel: string;
+    managedNote: string;
+  };
   settings: {
     langTitle: string;
     cloudSync: string;
@@ -150,6 +172,17 @@ export const EN: Translations = {
       'Enter the Policy ID and decryption key (BYOK) issued by Zenprax Cloud to sync.',
     policyIdLabel: 'Policy ID (UUID)',
     decryptionKeyLabel: 'Decryption Key (BYOK · Base64)',
+  },
+  tenantManager: {
+    title: 'Manage Trusted Tenants',
+    addButton: 'Add',
+    providerLabel: 'Provider',
+    tenantIdLabel: 'Tenant ID',
+    tenantIdPlaceholder: 'T0XXXXXXX',
+    labelLabel: 'Label',
+    labelPlaceholder: 'e.g. My Slack',
+    removeAriaLabel: 'Remove entry',
+    managedNote: 'Read-only under organization policy.',
   },
   managed: 'Managed by your organization',
   managedTooltip: 'Settings are enforced by an administrator policy and are read-only on this device.',
