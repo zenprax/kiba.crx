@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DRY_RUN_PREFIX, isDryRun, tagDetail } from './dryRun';
+import { DRY_RUN_PREFIX, isDryRun, isDryRunFor, tagDetail } from './dryRun';
 
 describe('isDryRun', () => {
   it('returns true when mode is DRY_RUN', () => {
@@ -13,6 +13,32 @@ describe('isDryRun', () => {
   it('returns false for null/undefined settings', () => {
     expect(isDryRun(null)).toBe(false);
     expect(isDryRun(undefined)).toBe(false);
+  });
+});
+
+describe('isDryRunFor', () => {
+  it('featureModes 未設定ならグローバル mode にフォールバックする', () => {
+    expect(isDryRunFor({ mode: 'DRY_RUN' }, 'paste')).toBe(true);
+    expect(isDryRunFor({ mode: 'ENFORCE' }, 'paste')).toBe(false);
+    expect(isDryRunFor({ mode: 'DRY_RUN', featureModes: {} }, 'file')).toBe(true);
+  });
+
+  it('該当機能の上書きがあればそれを優先する', () => {
+    // 全体は ENFORCE だがペーストだけ DRY_RUN。
+    const s = { mode: 'ENFORCE', featureModes: { paste: 'DRY_RUN' } } as const;
+    expect(isDryRunFor(s, 'paste')).toBe(true);
+    expect(isDryRunFor(s, 'file')).toBe(false); // 上書きなし → ENFORCE
+  });
+
+  it('全体 DRY_RUN でも機能だけ ENFORCE に上書きできる', () => {
+    const s = { mode: 'DRY_RUN', featureModes: { file: 'ENFORCE' } } as const;
+    expect(isDryRunFor(s, 'file')).toBe(false);
+    expect(isDryRunFor(s, 'paste')).toBe(true); // 上書きなし → DRY_RUN
+  });
+
+  it('null/undefined は false', () => {
+    expect(isDryRunFor(null, 'paste')).toBe(false);
+    expect(isDryRunFor(undefined, 'download')).toBe(false);
   });
 });
 

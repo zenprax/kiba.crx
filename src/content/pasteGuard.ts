@@ -14,7 +14,7 @@
  * entries are emitted so IT can pilot the policy without disrupting users.
  */
 
-import { isDryRun, tagDetail } from '../lib/dryRun';
+import { isDryRunFor, tagDetail } from '../lib/dryRun';
 import {
   describeMask,
   describePasteThreat,
@@ -41,11 +41,12 @@ export function initPasteGuard(getSettings: () => KibaSettings | null): () => vo
     // Respect the admin toggle; default to enabled until settings load.
     if (settings && !settings.antiClickFixEnabled) return;
 
-    const dryRun = isDryRun(settings);
     const selectedText = window.getSelection()?.toString() ?? '';
 
-    // Stage 1: dangerous OS commands are always fully blocked.
+    // Stage 1: dangerous OS commands are always fully blocked. Gated by the
+    // 'paste' feature mode (falls back to the global mode).
     if (isDangerousPaste(selectedText)) {
+      const dryRun = isDryRunFor(settings, 'paste');
       const detail = tagDetail(describePasteThreat(selectedText), dryRun);
       if (dryRun) {
         void addAuditLog('paste-block', detail, HOSTNAME);
@@ -62,13 +63,15 @@ export function initPasteGuard(getSettings: () => KibaSettings | null): () => vo
     }
 
     // Stage 2: in a restricted (foreign-tenant) context, mask confidential data
-    // before it reaches the clipboard.
+    // before it reaches the clipboard. This is a tenant-restriction action, so
+    // it follows the 'tenant' feature mode (falls back to the global mode).
     const maskEnabled = settings?.maskEnabled ?? true;
     if (!maskEnabled || !isRestrictedContext(settings)) return;
 
     const result = sanitizePaste(selectedText);
     if (!result.masked) return;
 
+    const dryRun = isDryRunFor(settings, 'tenant');
     const detail = tagDetail(describeMask(result), dryRun);
     if (dryRun) {
       void addAuditLog('paste-mask', detail, HOSTNAME);

@@ -7,7 +7,7 @@
  * `[DRY_RUN]`-tagged audit entries are emitted.
  */
 
-import { isDryRun, tagDetail } from '../lib/dryRun';
+import { isDryRunFor, tagDetail } from '../lib/dryRun';
 import { consumeBypass, isBypassValid } from '../lib/bypass';
 import { addAuditLog, getSettings as readSettings, setSettings } from '../lib/storage';
 import type { KibaSettings } from '../types';
@@ -37,7 +37,7 @@ export function initFileGater(getSettings: () => KibaSettings | null): () => voi
     }
 
     const settings = getSettings();
-    const dryRun = isDryRun(settings);
+    const dryRun = isDryRunFor(settings, 'file');
     if (dryRun) {
       // Simulated gate: log only, let the upload proceed.
       if (isRestrictedContext(settings)) {
@@ -87,7 +87,7 @@ export function initFileGater(getSettings: () => KibaSettings | null): () => voi
     const settings = getSettings();
     if (!isRestrictedContext(settings)) return;
 
-    const dryRun = isDryRun(settings);
+    const dryRun = isDryRunFor(settings, 'file');
     if (dryRun) {
       // Simulated gate: log only, let the drop proceed.
       void addAuditLog(

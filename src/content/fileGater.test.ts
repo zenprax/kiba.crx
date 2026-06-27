@@ -41,6 +41,7 @@ vi.mock('./overlay', () => ({
 // dryRun: never simulated, so the real enforcement path runs.
 vi.mock('../lib/dryRun', () => ({
   isDryRun: () => false,
+  isDryRunFor: () => false,
   tagDetail: (detail: string) => detail,
 }));
 
