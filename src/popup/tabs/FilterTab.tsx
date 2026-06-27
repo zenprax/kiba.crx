@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Shield, ShieldOff, Plus, X } from 'lucide-react';
+import { Shield, ShieldOff, Plus, X, Lock } from 'lucide-react';
 import type { KibaSettings } from '../../types';
 import { Card } from '../Popup';
 import { useLang } from '../i18n';
@@ -102,7 +102,10 @@ function DomainListCard({
       <div className="mt-zp-1 text-zp-md text-text-muted">{desc}</div>
 
       {isManaged ? (
-        <div className="mt-zp-2 text-zp-sm text-text-muted">{managedNote}</div>
+        <div className="mt-zp-2 flex items-center gap-zp-2 rounded-zp-lg border border-border-default bg-bg-surface px-zp-3 py-zp-2 text-zp-sm font-semibold text-brand-primary">
+          <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          <span>{managedNote}</span>
+        </div>
       ) : (
         <div className="mt-zp-3 flex gap-zp-2">
           <input
