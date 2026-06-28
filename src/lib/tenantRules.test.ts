@@ -1,21 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import type { TenantRuleDef } from '../types';
-import {
-  compileTenantRegex,
-  detectTenantByRules,
-  hostMatches,
-  MAX_TENANT_REGEX_LEN,
-} from './tenantRules';
+import { detectTenantByRules, hostMatches } from './tenantRules';
+import { compileSafePattern, MAX_PATTERN_SOURCE_LEN } from './patternCompiler';
 
-describe('compileTenantRegex', () => {
+describe('compileSafePattern (used for tenant regex)', () => {
   it('安全なパターンを RegExp 化する', () => {
-    expect(compileTenantRegex('/([a-z0-9-]+)')).toBeInstanceOf(RegExp);
+    expect(compileSafePattern('/([a-z0-9-]+)')).toBeInstanceOf(RegExp);
   });
 
   it('長すぎる/無効/危険なパターンは null', () => {
-    expect(compileTenantRegex('a'.repeat(MAX_TENANT_REGEX_LEN + 1))).toBeNull();
-    expect(compileTenantRegex('([')).toBeNull();
-    expect(compileTenantRegex('(a+)+')).toBeNull();
+    expect(compileSafePattern('a'.repeat(MAX_PATTERN_SOURCE_LEN + 1))).toBeNull();
+    expect(compileSafePattern('([')).toBeNull();
+    expect(compileSafePattern('(a+)+')).toBeNull();
   });
 });
 

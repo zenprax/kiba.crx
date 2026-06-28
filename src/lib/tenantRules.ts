@@ -6,45 +6,16 @@
  * the URL hostname and extracts tenantId from the pathname / hostname via a
  * regular expression.
  *
- * Security: `extract.regex` is an untrusted string. To avoid ReDoS, the local
- * safe compiler (compileTenantRegex) enforces a length cap, rejects dangerous
- * structures, and swallows invalid patterns. In the future, after
- * lib/patternCompiler lands in main, this may be consolidated there (removing
- * the duplicated logic).
+ * Security: `extract.regex` is an untrusted string. Safe instantiation is
+ * delegated to compileSafePattern (lib/patternCompiler), which enforces a
+ * length cap, rejects dangerous structures, and swallows invalid patterns.
  *
  * DOM/Chrome-independent. Unit-testable (tenantRules.test.ts).
  */
 
 import type { TenantContext } from './tenantDetector';
 import type { TenantRuleDef } from '../types';
-
-/** Maximum length of a RegExp source string (first-line defense to mitigate ReDoS). */
-export const MAX_TENANT_REGEX_LEN = 512;
-
-const NESTED_QUANTIFIER = /\([^)]*[+*][^)]*\)[+*]/;
-const ADJACENT_QUANTIFIER = /[+*?]\s*[+*]/;
-const LARGE_BOUNDED_QUANTIFIER = /\{\s*\d{4,}/;
-
-/**
- * Validates an untrusted RegExp source and returns a RegExp if safe (null when rejected).
- * Equivalent defense to lib/patternCompiler.compileSafePattern. Flags are fixed.
- */
-export function compileTenantRegex(source: string): RegExp | null {
-  if (typeof source !== 'string') return null;
-  if (source.length === 0 || source.length > MAX_TENANT_REGEX_LEN) return null;
-  if (
-    NESTED_QUANTIFIER.test(source) ||
-    ADJACENT_QUANTIFIER.test(source) ||
-    LARGE_BOUNDED_QUANTIFIER.test(source)
-  ) {
-    return null;
-  }
-  try {
-    return new RegExp(source);
-  } catch {
-    return null;
-  }
-}
+import { compileSafePattern } from './patternCompiler';
 
 /**
  * Whether hostMatch matches the hostname. A leading wildcard `*.example.com`
@@ -76,7 +47,7 @@ export function detectTenantByRules(url: string, rules: TenantRuleDef[]): Tenant
   for (const rule of rules) {
     if (!hostMatches(rule.hostMatch, hostname)) continue;
 
-    const re = compileTenantRegex(rule.extract.regex);
+    const re = compileSafePattern(rule.extract.regex);
     if (!re) continue; // Skip dangerous/invalid rules
 
     const source = rule.extract.source === 'hostname' ? hostname : pathname;
