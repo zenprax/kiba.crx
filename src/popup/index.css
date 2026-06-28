@@ -13,32 +13,141 @@ body {
 }
 
 /* ------------------------------------------------------------------ *
- * Tab navigation: icon-fixed + label expand animation
+ * Hero header: ambient light + danger/paused states
+ * ------------------------------------------------------------------ */
+.header-wrap {
+  background: linear-gradient(160deg, #112236 0%, #0d1a2b 65%);
+}
+
+.header-ambient {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 300px 130px at 50% -30px,
+    rgba(74,222,128,0.09) 0%, transparent 70%);
+  pointer-events: none;
+  transition: background 0.8s ease;
+  z-index: 0;
+}
+
+.header-paused .header-ambient {
+  background: radial-gradient(ellipse 300px 130px at 50% -30px,
+    rgba(252,211,77,0.08) 0%, transparent 70%);
+}
+
+.header-alert .header-ambient {
+  background: radial-gradient(ellipse 300px 130px at 50% -30px,
+    rgba(253,164,175,0.12) 0%, transparent 70%);
+}
+
+/* ------------------------------------------------------------------ *
+ * Expand/collapse button — tab shape, absolute bottom-center
+ * ------------------------------------------------------------------ */
+.expand-btn {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 14px 5px;
+  background: rgba(17,34,54,0.7);
+  border: 1px solid #1B3A5C;
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  font-size: 10px;
+  font-weight: 600;
+  color: #5499CA;
+  cursor: pointer;
+  z-index: 2;
+  user-select: none;
+  transition: color 0.15s, background 0.15s;
+  white-space: nowrap;
+}
+
+.expand-btn:hover {
+  color: #BDD8ED;
+  background: rgba(17,34,54,0.95);
+}
+
+.expand-chevron {
+  font-size: 9px;
+  transition: transform 0.25s ease;
+  display: inline-block;
+  transform: rotate(180deg);
+}
+
+.expand-chevron-open {
+  transform: rotate(0deg);
+}
+
+/* ------------------------------------------------------------------ *
+ * Tab navigation: icon-fixed + underline style + label expand
  * ------------------------------------------------------------------ */
 .tab-btn {
   display: flex;
   align-items: center;
+  justify-content: flex-start;
   gap: 0;
+  height: 40px;
+  min-width: 40px;
   overflow: hidden;
   white-space: nowrap;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #5499CA;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  position: relative;
+}
+
+.tab-btn:not(.tab-active):hover {
+  color: #BDD8ED;
+}
+
+.tab-btn:not(.tab-active):hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: #1B3A5C;
+  color: #F2F7FB;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  border: 1px solid #1B3A5C;
+  pointer-events: none;
+  z-index: 50;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+
+.tab-btn.tab-active {
+  color: #84B8DC;
+  border-bottom-color: #84B8DC;
 }
 
 .tab-label {
   display: inline-block;
-  max-width: 0;
+  width: 0;
   overflow: hidden;
   opacity: 0;
   transition:
-    max-width 0.22s ease,
-    opacity 0.18s ease,
-    margin-left 0.22s ease;
+    width 0.28s cubic-bezier(0.4,0,0.2,1),
+    opacity 0.2s ease,
+    margin-left 0.28s cubic-bezier(0.4,0,0.2,1);
   margin-left: 0;
 }
 
 .tab-btn.tab-active .tab-label {
-  max-width: 120px;
+  width: 72px;
   opacity: 1;
-  margin-left: 0.35rem;
+  margin-left: 5px;
 }
 
 /* ------------------------------------------------------------------ *
@@ -116,11 +225,68 @@ body {
 }
 
 /* ------------------------------------------------------------------ *
- * Ambient danger flash (Phase 2-E)
+ * Ambient danger flash (header-alert overrides ambient light)
  * ------------------------------------------------------------------ */
-.header-danger {
-  background-image: linear-gradient(to bottom right, #3d1a1a, #2a1414) !important;
-  transition: background-image 0s;
+.header-alert {
+  /* ambient light handles the color via .header-alert .header-ambient */
+}
+
+/* ------------------------------------------------------------------ *
+ * Feed bar tag colors
+ * ------------------------------------------------------------------ */
+.feed-bar-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.feed-tag-paste   { background: rgba(127,29,29,0.20); color: #FDA4AF; }
+.feed-tag-sso     { background: rgba(30,64,175,0.20); color: #93C5FD; }
+.feed-tag-bypass  { background: rgba(245,158,11,0.14); color: #FCD34D; }
+.feed-tag-dl      { background: rgba(84,153,202,0.14); color: #84B8DC; }
+.feed-tag-default { background: rgba(31,74,115,1); color: #5499CA; }
+
+/* ------------------------------------------------------------------ *
+ * Keyboard hint bar
+ * ------------------------------------------------------------------ */
+.kb-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 6px 14px 8px;
+  background: rgba(17,34,54,0.5);
+  border-top: 1px solid rgba(27,58,92,0.5);
+  flex-wrap: wrap;
+}
+
+.kb-hint-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: #5499CA;
+}
+
+.kb-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 16px;
+  border-radius: 3px;
+  border: 1px solid rgba(84,153,202,0.3);
+  background: rgba(84,153,202,0.08);
+  font-size: 9px;
+  font-weight: 700;
+  color: #5499CA;
+  font-family: ui-monospace, monospace;
+  line-height: 1;
 }
 
 /* ------------------------------------------------------------------ *
@@ -128,6 +294,14 @@ body {
  * ------------------------------------------------------------------ */
 @media (prefers-reduced-motion: reduce) {
   .tab-label {
+    transition: none;
+  }
+
+  .expand-chevron {
+    transition: none;
+  }
+
+  .header-ambient {
     transition: none;
   }
 

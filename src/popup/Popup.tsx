@@ -10,8 +10,6 @@ import {
   FileText,
   Settings as SettingsIcon,
   Shield,
-  ChevronUp,
-  ChevronDown,
 } from 'lucide-react';
 import { type TabId, type TenantWhitelistEntry, type AuditEventType } from '../types';
 import { useKibaSettings, useManagedPolicy, useCredentialStatus } from './hooks';
@@ -177,26 +175,23 @@ export function Popup() {
     <div className="min-h-[480px] bg-bg-base text-text-primary font-sans">
       {/* Status header */}
       <header
-        className={`px-zp-5 pt-zp-4 pb-zp-3 border-b border-border-default transition-colors duration-300 ${
-          dangerFlash
-            ? 'header-danger'
-            : 'bg-gradient-to-br from-bg-surface to-bg-overlay'
+        className={`header-wrap px-zp-5 pt-zp-4 border-b border-border-default relative overflow-hidden cursor-default ${
+          dangerFlash ? 'header-alert' : settings.enabled ? '' : 'header-paused'
         }`}
       >
-        {/* Top row: branding + shield + controls */}
-        <div className="flex items-center justify-between">
-          {/* Shield wrap + brand */}
-          <div className="flex items-center gap-zp-3">
-            <ShieldWrap enabled={settings.enabled} />
-            <div>
-              <div className="text-zp-sm font-bold tracking-widest text-brand-primary uppercase">
-                Zenprax
-              </div>
-              <h1 className="text-zp-xl font-bold leading-tight">kiba.crx</h1>
+        {/* Ambient light layer */}
+        <div className="header-ambient" aria-hidden />
+
+        {/* Top row: wordmark + controls */}
+        <div className="relative z-10 flex items-start justify-between">
+          <div>
+            <div className="text-zp-sm font-bold tracking-widest text-brand-primary uppercase leading-none mb-0.5">
+              Zenprax
             </div>
+            <h1 className="text-zp-xl font-bold leading-tight">kiba.crx</h1>
           </div>
 
-          <div className="flex items-center gap-zp-2">
+          <div className="flex items-center gap-zp-2 pt-0.5">
             {isDryRun && (
               <span className="inline-flex items-center gap-zp-1 rounded-zp-full bg-status-warn-bg px-zp-2 py-zp-1 text-zp-sm font-semibold text-status-warn-text">
                 <span className="h-1.5 w-1.5 rounded-zp-full bg-status-warn-text" />
@@ -213,16 +208,40 @@ export function Popup() {
           </div>
         </div>
 
-        {/* Blocked count + flyup */}
-        <div className="mt-zp-2 flex items-center gap-zp-2">
-          <span className="text-zp-sm text-text-muted">ブロック</span>
-          <div className="relative inline-block" ref={flyupContainerRef}>
-            <span className="text-zp-base font-bold text-brand-primary">{blockedCount}</span>
+        {/* Hero status row: shield + label + live-feed + blocked-counter */}
+        <div className="relative z-10 flex items-center gap-zp-3 pt-zp-3">
+          <ShieldWrap enabled={settings.enabled} />
+
+          <div className="flex-1 min-w-0">
+            <div className={`hero-status-label text-[15px] font-bold leading-tight ${settings.enabled ? 'text-status-safe-text' : 'text-status-warn-text'}`}>
+              {settings.enabled ? 'すべての脅威をブロック中' : '保護が無効になっています'}
+            </div>
+            {latestEntry && (
+              <div className="flex items-center gap-zp-1 mt-0.5">
+                <span className={`live-dot h-[5px] w-[5px] shrink-0 rounded-full ${settings.enabled ? 'bg-status-safe-text' : 'bg-status-warn-text'}`} />
+                <span className="text-zp-xs text-text-secondary font-medium truncate">
+                  {EVENT_TAG[latestEntry.type] ?? latestEntry.type}
+                </span>
+                <span className="text-zp-xs text-text-muted shrink-0">
+                  {formatRelativeTime(latestEntry.ts)}
+                </span>
+              </div>
+            )}
           </div>
-          <span className="text-zp-sm text-text-muted">件</span>
+
+          <div className="text-right shrink-0">
+            <div className="relative" ref={flyupContainerRef}>
+              <span className="text-[28px] font-extrabold leading-none tracking-tight text-brand-hover">
+                {blockedCount}
+              </span>
+            </div>
+            <div className="text-[10px] uppercase tracking-widest text-text-muted mt-0.5">
+              ブロック件数
+            </div>
+          </div>
         </div>
 
-        {/* Feed bar: latest audit event */}
+        {/* Feed bar */}
         {latestEntry && (
           <FeedBar entry={latestEntry} />
         )}
@@ -230,7 +249,7 @@ export function Popup() {
         {isManaged && (
           <Tooltip.Root>
             <Tooltip.Trigger asChild>
-              <div className="mt-zp-2 flex cursor-default items-center gap-zp-2 rounded-zp-lg border border-border-default bg-bg-surface px-zp-3 py-zp-2 text-zp-sm font-semibold text-brand-primary">
+              <div className="relative z-10 mt-zp-2 flex cursor-default items-center gap-zp-2 rounded-zp-lg border border-border-default bg-bg-surface px-zp-3 py-zp-2 text-zp-sm font-semibold text-brand-primary">
                 <Lock className="h-3.5 w-3.5" aria-hidden />
                 {t.managed}
               </div>
@@ -248,23 +267,21 @@ export function Popup() {
           </Tooltip.Root>
         )}
 
-        {/* Hero collapse toggle */}
+        {/* Hero collapse toggle — absolute bottom-center, tab shape */}
         <button
           onClick={() => setHeroOpen((o) => !o)}
           aria-label={heroOpen ? 'コンテンツを閉じる' : 'コンテンツを開く'}
-          className="mt-zp-2 flex w-full items-center justify-center gap-zp-1 text-zp-xs text-text-muted hover:text-text-secondary transition"
+          className="expand-btn"
         >
-          {heroOpen
-            ? <><span>閉じる</span><ChevronUp className="h-3 w-3" aria-hidden /></>
-            : <><span>開く</span><ChevronDown className="h-3 w-3" aria-hidden /></>
-          }
+          <span>{heroOpen ? '閉じる' : '開く'}</span>
+          <span className={`expand-chevron ${heroOpen ? 'expand-chevron-open' : ''}`}>▴</span>
         </button>
       </header>
 
       {/* Collapsible body */}
       <div className={`hero-body ${heroOpen ? 'hero-body-open' : 'hero-body-closed'}`}>
         {/* Tab navigation */}
-        <nav className="flex gap-zp-1 border-b border-border-default bg-bg-surface/40 px-zp-2 pt-zp-2">
+        <nav className="flex items-stretch border-b border-border-default bg-bg-surface/80 px-zp-2 gap-0">
           {tabs.map((tab, idx) => {
             const isActive = activeTab === tab.id;
             return (
@@ -272,12 +289,8 @@ export function Popup() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 aria-keyshortcuts={`${idx + 1}`}
-                title={isActive ? undefined : tab.label}
-                className={`tab-btn rounded-t-zp-lg px-zp-2 py-zp-2 text-zp-md font-semibold transition ${
-                  isActive
-                    ? 'tab-active bg-bg-base text-brand-primary'
-                    : 'text-text-muted hover:text-text-secondary'
-                }`}
+                data-tip={tab.label}
+                className={`tab-btn px-zp-3 ${isActive ? 'tab-active' : ''}`}
               >
                 {TAB_ICONS[tab.id]}
                 <span className="tab-label">{tab.label}</span>
@@ -326,8 +339,22 @@ export function Popup() {
         </main>
 
         {/* Keyboard hint bar */}
-        <div className="border-t border-border-default bg-bg-surface/40 px-zp-3 py-zp-1 text-center text-zp-xs text-text-muted">
-          1–{tabs.length} タブ切替 · E 有効/無効
+        <div className="kb-hint">
+          <div className="kb-hint-item">
+            <span className="kb-key">1</span>
+            <span>–</span>
+            <span className="kb-key">{tabs.length}</span>
+            <span className="ml-0.5">タブ切替</span>
+          </div>
+          <div className="kb-hint-item">
+            <span className="kb-key">E</span>
+            <span className="ml-0.5">有効/無効</span>
+          </div>
+          <div className="kb-hint-item">
+            <span className="kb-key">↑</span>
+            <span className="kb-key">↓</span>
+            <span className="ml-0.5">スクロール</span>
+          </div>
         </div>
       </div>
     </div>
@@ -362,12 +389,22 @@ function ShieldWrap({ enabled }: { enabled: boolean }) {
   );
 }
 
+const FEED_TAG_CLASS: Partial<Record<AuditEventType, string>> = {
+  'paste-block':    'feed-tag-paste',
+  'paste-mask':     'feed-tag-paste',
+  'tenant-block':   'feed-tag-paste',
+  'sso-fill':       'feed-tag-sso',
+  'bypass-grant':   'feed-tag-bypass',
+  'download-block': 'feed-tag-dl',
+  'screen-share':   'feed-tag-dl',
+};
+
 function FeedBar({ entry }: { entry: { ts: number; type: AuditEventType; detail: string } }) {
   const tag = EVENT_TAG[entry.type] ?? entry.type.toUpperCase();
+  const tagClass = FEED_TAG_CLASS[entry.type] ?? 'feed-tag-default';
   return (
-    <div className="mt-zp-2 flex items-center gap-zp-2 overflow-hidden rounded-zp-lg bg-bg-base/50 px-zp-2 py-zp-1">
-      <span className="live-dot h-1.5 w-1.5 shrink-0 rounded-full bg-brand-primary" />
-      <span className="rounded bg-brand-muted px-zp-1 py-0.5 text-zp-xs font-bold uppercase text-brand-primary">
+    <div className="feed-bar-row relative z-10 mt-zp-2 flex items-center gap-zp-2 overflow-hidden border-t border-border-default/60 pt-zp-2 pb-zp-5">
+      <span className={`feed-bar-tag ${tagClass}`}>
         {tag}
       </span>
       <span className="min-w-0 flex-1 truncate text-zp-xs text-text-secondary">{entry.detail}</span>
@@ -443,30 +480,25 @@ export function Toggle({
 
 export function TenantList({
   entries,
-  emptyLabel,
   onNavigateToSettings,
 }: {
   entries: TenantWhitelistEntry[];
-  emptyLabel: string;
+  emptyLabel?: string;
   onNavigateToSettings?: () => void;
 }) {
   if (entries.length === 0) {
     return (
-      <div className="mt-zp-2 rounded-zp-lg border border-dashed border-border-default py-zp-3 text-center text-zp-sm text-text-muted">
-        {onNavigateToSettings ? (
-          <>
-            <span>{emptyLabel}</span>
-            {' '}
-            <button
-              onClick={onNavigateToSettings}
-              className="inline-flex items-center gap-zp-1 text-brand-primary underline hover:no-underline"
-            >
-              <SettingsIcon className="h-3 w-3" aria-hidden />
-              設定タブで追加
-            </button>
-          </>
-        ) : (
-          emptyLabel
+      <div className="mt-zp-2 rounded-zp-lg border border-dashed border-border-default p-zp-3 text-center">
+        <p className="text-zp-xs text-text-muted leading-relaxed">
+          テナントを追加すると、外部貼り付けの<br />マスク精度が向上します。
+        </p>
+        {onNavigateToSettings && (
+          <button
+            onClick={onNavigateToSettings}
+            className="mt-zp-1 text-zp-xs font-semibold text-brand-hover hover:underline"
+          >
+            + テナントを追加 →
+          </button>
         )}
       </div>
     );
