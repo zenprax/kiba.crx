@@ -11,3 +11,7 @@ yarn-error.log*
 
 # Internal spec / assistant docs (not published)
 CLAUDE.md
+
+# Tool-generated indexes (not published)
+.codegraph/
+.claude/
