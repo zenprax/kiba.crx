@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Shield, ShieldOff, Plus, X, Lock } from 'lucide-react';
 import type { KibaSettings } from '../../types';
-import { Card } from '../Popup';
+import { Card } from '../components';
 import { useLang } from '../i18n';
 
 export interface FilterTabProps {

@@ -1,5 +1,5 @@
 import { KeyRound } from 'lucide-react';
-import { Card } from '../Popup';
+import { Card } from '../components';
 import { useLang } from '../i18n';
 
 export interface SsoListProps {

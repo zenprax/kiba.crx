@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import * as Switch from '@radix-ui/react-switch';
 import * as Tooltip from '@radix-ui/react-tooltip';
 import {
   Lock,
@@ -9,18 +8,19 @@ import {
   MapPin,
   FileText,
   Settings as SettingsIcon,
-  Shield,
 } from 'lucide-react';
-import { type TabId, type TenantWhitelistEntry, type AuditEventType } from '../types';
+import { type TabId, type AuditEventType } from '../types';
 import { sendKibaMessage } from '../lib/messaging';
 import { useKibaSettings, useManagedPolicy, useCredentialStatus } from './hooks';
+import { ShieldWrap, FeedBar, StatusPill, Toggle } from './components';
+import { EVENT_TAG, formatRelativeTime } from './components/utils';
 import { Dashboard } from './tabs/Dashboard';
 import { FilterTab } from './tabs/FilterTab';
 import { AntiClickFixTab } from './tabs/AntiClickFixTab';
 import { SsoList } from './tabs/SsoList';
 import { AuditLog } from './tabs/AuditLog';
 import { Settings } from './tabs/Settings';
-import { type Translations, JA, EN, LangContext } from './i18n';
+import { JA, EN, LangContext } from './i18n';
 
 const TAB_ICONS: Record<TabId, ReactNode> = {
   dashboard: <LayoutDashboard className="h-4 w-4 shrink-0" aria-hidden />,
@@ -32,25 +32,6 @@ const TAB_ICONS: Record<TabId, ReactNode> = {
 };
 
 const DANGER_EVENTS: AuditEventType[] = ['paste-block', 'tenant-block', 'download-block'];
-
-function formatRelativeTime(ts: number): string {
-  const diff = Math.floor((Date.now() - ts) / 1000);
-  if (diff < 60) return `${diff}秒前`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}分前`;
-  return `${Math.floor(diff / 3600)}時間前`;
-}
-
-const EVENT_TAG: Partial<Record<AuditEventType, string>> = {
-  'paste-block': 'PASTE',
-  'file-block': 'FILE',
-  'bypass-grant': 'BYPASS',
-  'paste-mask': 'MASK',
-  'sso-fill': 'SSO',
-  'tenant-block': 'TENANT',
-  'extension-audit': 'EXT',
-  'download-block': 'DL',
-  'screen-share': 'SCREEN',
-};
 
 /** Admin/User local dashboard for kiba.crx. */
 export function Popup() {
@@ -367,165 +348,5 @@ export function Popup() {
         </div>
       </Tooltip.Provider>
     </LangContext.Provider>
-  );
-}
-
-/* ------------------------------------------------------------------ *
- * Shared popup-scoped UI primitives (exported for the tab modules).
- * ------------------------------------------------------------------ */
-
-function ShieldWrap({ enabled }: { enabled: boolean }) {
-  return (
-    <div className={`relative flex items-center justify-center ${enabled ? '' : 'shield-paused'}`}>
-      {/* pulse rings */}
-      <span
-        className={`shield-ring-1 absolute h-9 w-9 rounded-full ${
-          enabled ? 'border-2 border-brand-primary' : 'border-2 border-status-warn-text'
-        }`}
-      />
-      <span
-        className={`shield-ring-2 absolute h-9 w-9 rounded-full ${
-          enabled ? 'border border-brand-primary/50' : 'border border-status-warn-text/40'
-        }`}
-      />
-      <Shield
-        className={`relative h-7 w-7 ${enabled ? 'text-brand-primary' : 'text-status-warn-text'}`}
-        aria-hidden
-      />
-    </div>
-  );
-}
-
-const FEED_TAG_CLASS: Partial<Record<AuditEventType, string>> = {
-  'paste-block': 'feed-tag-paste',
-  'paste-mask': 'feed-tag-paste',
-  'tenant-block': 'feed-tag-paste',
-  'sso-fill': 'feed-tag-sso',
-  'bypass-grant': 'feed-tag-bypass',
-  'download-block': 'feed-tag-dl',
-  'screen-share': 'feed-tag-dl',
-};
-
-function FeedBar({ entry }: { entry: { ts: number; type: AuditEventType; detail: string } }) {
-  const tag = EVENT_TAG[entry.type] ?? entry.type.toUpperCase();
-  const tagClass = FEED_TAG_CLASS[entry.type] ?? 'feed-tag-default';
-  return (
-    <div className="feed-bar-row relative z-10 mt-zp-2 flex items-center gap-zp-2 overflow-hidden border-t border-border-default/60 pt-zp-2 pb-zp-5">
-      <span className={`feed-bar-tag ${tagClass}`}>{tag}</span>
-      <span className="min-w-0 flex-1 truncate text-zp-xs text-text-secondary">{entry.detail}</span>
-      <span className="shrink-0 text-zp-xs text-text-muted">{formatRelativeTime(entry.ts)}</span>
-    </div>
-  );
-}
-
-export function StatusPill({ active, t }: { active: boolean; t: Translations }) {
-  return (
-    <span
-      className={`inline-flex items-center gap-zp-1 rounded-zp-full px-zp-2 py-zp-1 text-zp-sm font-semibold ${
-        active ? 'bg-status-safe-bg text-status-safe-text' : 'bg-bg-overlay text-text-muted'
-      }`}
-    >
-      <span
-        className={`h-1.5 w-1.5 rounded-zp-full ${active ? 'bg-status-safe-text' : 'bg-text-muted'}`}
-      />
-      {active ? t.status.protected : t.status.paused}
-    </span>
-  );
-}
-
-export function Card({ children }: { children: ReactNode }) {
-  return (
-    <section className="rounded-zp-xl border border-border-default bg-bg-surface/60 p-zp-3">
-      {children}
-    </section>
-  );
-}
-
-export function StatCard({
-  label,
-  value,
-  accent = 'brand',
-}: {
-  label: string;
-  value: string | number;
-  accent?: 'brand' | 'warn';
-}) {
-  const color = accent === 'warn' ? 'text-status-warn-text' : 'text-brand-primary';
-  return (
-    <div className="rounded-zp-xl border border-border-default bg-bg-surface/60 p-zp-3">
-      <div className={`text-zp-2xl font-bold ${color}`}>{value}</div>
-      <div className="text-zp-sm uppercase tracking-wide text-text-muted">{label}</div>
-    </div>
-  );
-}
-
-export function Toggle({
-  checked,
-  disabled,
-  onChange,
-  label,
-}: {
-  checked: boolean;
-  disabled?: boolean;
-  onChange: () => void;
-  label?: string;
-}) {
-  return (
-    <Switch.Root
-      checked={checked}
-      disabled={disabled}
-      onCheckedChange={onChange}
-      aria-label={label}
-      className="relative h-6 w-11 shrink-0 rounded-zp-full bg-toggle-off transition data-[state=checked]:bg-brand-primary disabled:opacity-50"
-    >
-      <Switch.Thumb className="block h-5 w-5 translate-x-0.5 rounded-zp-full bg-toggle-knob transition-transform data-[state=checked]:translate-x-[22px]" />
-    </Switch.Root>
-  );
-}
-
-export function TenantList({
-  entries,
-  onNavigateToSettings,
-}: {
-  entries: TenantWhitelistEntry[];
-  emptyLabel?: string;
-  onNavigateToSettings?: () => void;
-}) {
-  if (entries.length === 0) {
-    return (
-      <div className="mt-zp-2 rounded-zp-lg border border-dashed border-border-default p-zp-3 text-center">
-        <p className="text-zp-xs text-text-muted leading-relaxed">
-          テナントを追加すると、外部貼り付けの
-          <br />
-          マスク精度が向上します。
-        </p>
-        {onNavigateToSettings && (
-          <button
-            onClick={onNavigateToSettings}
-            className="mt-zp-1 text-zp-xs font-semibold text-brand-hover hover:underline"
-          >
-            + テナントを追加 →
-          </button>
-        )}
-      </div>
-    );
-  }
-  return (
-    <ul className="mt-zp-2 space-y-1.5">
-      {entries.map((e) => (
-        <li
-          key={`${e.provider}-${e.tenantId}`}
-          className="flex items-center justify-between rounded-zp-lg bg-bg-base/60 px-zp-2 py-zp-2 text-zp-md"
-        >
-          <div className="min-w-0">
-            <div className="truncate text-text-primary">{e.label}</div>
-            <div className="truncate font-mono text-zp-xs text-text-muted">{e.tenantId}</div>
-          </div>
-          <span className="shrink-0 rounded-zp-sm bg-brand-muted px-zp-1 py-0.5 text-zp-xs font-bold uppercase text-brand-primary">
-            {e.provider}
-          </span>
-        </li>
-      ))}
-    </ul>
   );
 }

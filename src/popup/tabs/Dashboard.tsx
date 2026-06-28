@@ -15,7 +15,7 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import type { KibaSettings, TabId } from '../../types';
-import { Card, StatCard, Toggle, TenantList } from '../Popup';
+import { Card, StatCard, Toggle, TenantList } from '../components';
 import { useLang } from '../i18n';
 
 function hostnameOf(url: string): string | null {

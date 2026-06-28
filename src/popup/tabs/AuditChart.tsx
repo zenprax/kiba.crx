@@ -1,6 +1,6 @@
 import { getTheme } from '@zenprax/design-tokens';
 import type { AuditEventType, AuditLogEntry } from '../../types';
-import { Card } from '../Popup';
+import { Card } from '../components';
 import { useLang } from '../i18n';
 
 /** type 別の集計結果（多い順）。 */

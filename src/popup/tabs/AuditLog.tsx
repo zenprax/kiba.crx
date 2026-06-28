@@ -11,7 +11,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { AuditEventType, AuditLogEntry } from '../../types';
-import { Card } from '../Popup';
+import { Card } from '../components';
 import { useLang } from '../i18n';
 import { AuditChart } from './AuditChart';
 

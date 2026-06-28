@@ -16,7 +16,7 @@ import type { KibaMode, KibaSettings, TenantWhitelistEntry } from '../../types';
 import type { TenantProvider } from '../../types';
 import type { DryRunFeature } from '../../lib/dryRun';
 import { sendKibaMessage } from '../../lib/messaging';
-import { Card } from '../Popup';
+import { Card } from '../components';
 import { useLang } from '../i18n';
 
 export interface SettingsProps {
