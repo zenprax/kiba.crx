@@ -13,6 +13,7 @@ interface TenantManagerCardProps {
   onUpdateSettings: (patch: Partial<KibaSettings>) => Promise<void>;
 }
 
+/** Card for managing the trusted tenant whitelist. */
 export function TenantManagerCard({ entries, isManaged, onUpdateSettings }: TenantManagerCardProps) {
   const t = useLang();
   const [provider, setProvider] = useState<TenantProvider>('slack');

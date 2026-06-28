@@ -4,7 +4,6 @@
  * Verifies that forged postMessages from the page are rejected and that
  * addAuditLog is called only for legitimate marker-bearing messages. Runs on a
  * lightweight fake DOM (node environment).
- *
  * @vitest-environment node
  */
 

@@ -15,6 +15,9 @@ import type { KibaSettings, TabId } from '../../types';
 import { Card, StatCard, Toggle, TenantList, SiteSegmentCard } from '../components';
 import { useLang } from '../i18n';
 
+/**
+ *
+ */
 export interface DashboardProps {
   settings: KibaSettings;
   loading: boolean;
@@ -31,6 +34,7 @@ export interface DashboardProps {
   onNavigate: (tab: TabId) => void;
 }
 
+/** Main dashboard tab showing feature toggles, bypass control, and tenant list. */
 export function Dashboard({
   settings,
   loading,

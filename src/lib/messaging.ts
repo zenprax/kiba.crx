@@ -11,7 +11,6 @@ import type { KibaMessage, KibaResponse } from '../types';
 /**
  * Send a message to the background service worker and resolve with its typed
  * response. For fire-and-forget messages the response type is `void`.
- *
  * @param msg The message to send; its `kind` determines the response type.
  * @returns The background worker's response, typed per {@link KibaMessageMap}.
  */

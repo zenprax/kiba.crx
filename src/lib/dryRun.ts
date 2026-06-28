@@ -28,6 +28,7 @@ export function isDryRun(settings: Pick<KibaSettings, 'mode'> | null | undefined
  */
 export type DryRunFeature = 'paste' | 'file' | 'tenant' | 'download';
 
+/** Returns true when the current settings run the given feature in DRY_RUN mode. */
 export function isDryRunFor(
   settings: Pick<KibaSettings, 'mode' | 'featureModes'> | null | undefined,
   feature: DryRunFeature,

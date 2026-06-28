@@ -4,7 +4,6 @@
  * Regression target: block/allow rules must use the domain-anchor urlFilter
  * (`||${domain}`) rather than the loose substring pattern (`*${domain}*`), so
  * adding e.g. google.com actually blocks the host and its subdomains.
- *
  * @vitest-environment node
  */
 

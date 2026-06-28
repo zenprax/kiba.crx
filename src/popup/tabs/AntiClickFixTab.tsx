@@ -3,6 +3,7 @@ import type { KibaSettings } from '../../types';
 import { Card } from '../components';
 import { useLang } from '../i18n';
 
+/** Tab displaying Anti-ClickFix status and custom detection patterns. */
 export function AntiClickFixTab({ settings }: { settings: KibaSettings }) {
   const t = useLang();
   const customDanger = settings.customPatterns?.danger ?? [];

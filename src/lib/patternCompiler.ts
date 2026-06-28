@@ -34,7 +34,6 @@ const LARGE_BOUNDED_QUANTIFIER = /\{\s*\d{4,}/;
 /**
  * Validates an untrusted RegExp source and returns a RegExp if judged safe.
  * Returns null when rejected (the caller falls back to the built-in defaults).
- *
  * @param source RegExp source string (flags not included)
  * @param flags  Fixed flags. Not specifiable by the distributor (prevents state corruption or behavior changes)
  */

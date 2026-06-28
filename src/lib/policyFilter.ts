@@ -80,7 +80,6 @@ export function matchTarget(target: PolicyTarget, claims: PolicyClaims): boolean
 
 /**
  * Decrypts an AES-GCM encrypted binary blob and returns a {@link KibaMasterPolicy}.
- *
  * @param buffer ArrayBuffer of the ciphertext (includes the GCM authentication tag).
  * @param rawKey Raw symmetric key bytes (BYOK).
  * @param iv     12-byte initialization vector.

@@ -55,6 +55,7 @@ const EVENT_COLOR: Record<AuditEventType, string> = {
   'screen-share': 'text-status-info-text bg-status-info-bg',
 };
 
+/** Scrollable list of recent local security-event audit entries. */
 export function AuditLog({ entries }: { entries: AuditLogEntry[] }) {
   const t = useLang();
 

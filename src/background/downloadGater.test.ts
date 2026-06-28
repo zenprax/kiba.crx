@@ -1,6 +1,5 @@
 /**
  * Unit tests for the Download Gater decision logic (pure functions).
- *
  * @vitest-environment node
  */
 

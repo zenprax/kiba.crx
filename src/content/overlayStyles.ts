@@ -6,7 +6,7 @@
  * page either).
  *
  * Colors, shadows, spacing, radii, and font sizes all reference CSS custom
- * properties (`--zp-*`) derived from @zenprax/design-tokens. overlay.tsx builds
+ * properties (`--zp-*`) derived from `@zenprax/design-tokens`. overlay.tsx builds
  * these variables from `cssVariables('dark', ':host')` and `getTheme('dark')`
  * and injects them into :host. Do not write raw color codes, raw rgba, or raw
  * size values here (the only exception is the container's max width

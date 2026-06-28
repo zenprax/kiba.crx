@@ -6,12 +6,16 @@ import { CloudSyncCard } from './settings/CloudSyncCard';
 import { FeatureModesCard } from './settings/FeatureModesCard';
 import { TenantManagerCard } from './settings/TenantManagerCard';
 
+/**
+ *
+ */
 export interface SettingsProps {
   settings: KibaSettings;
   isManaged: boolean;
   onUpdateSettings: (patch: Partial<KibaSettings>) => Promise<void>;
 }
 
+/** Settings tab: theme, language, per-feature modes, cloud sync, and tenant manager. */
 export function Settings({ settings, isManaged, onUpdateSettings }: SettingsProps) {
   const t = useLang();
 

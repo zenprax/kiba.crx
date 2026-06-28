@@ -4,12 +4,14 @@ import type { KibaSettings } from '../../types';
 import { Card } from '../components';
 import { useLang } from '../i18n';
 
+/** Props for FilterTab. */
 export interface FilterTabProps {
   settings: KibaSettings;
   isManaged: boolean;
   onUpdateSettings: (patch: Partial<KibaSettings>) => Promise<void>;
 }
 
+/** Tab for managing network-filter block/allow lists. */
 export function FilterTab({ settings, isManaged, onUpdateSettings }: FilterTabProps) {
   const t = useLang();
 

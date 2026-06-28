@@ -1,5 +1,8 @@
 import { createContext, useContext } from 'react';
 
+/**
+ *
+ */
 export type Lang = 'ja' | 'en';
 
 export const JA: Translations = {
@@ -142,6 +145,9 @@ export const JA: Translations = {
   managedTooltip: '管理者ポリシーにより設定は読み取り専用です。',
 } as const;
 
+/**
+ *
+ */
 export type Translations = {
   status: { protected: string; paused: string };
   tabs: {
@@ -417,6 +423,7 @@ export const EN: Translations = {
 
 export const LangContext = createContext<Translations>(JA);
 
+/** Returns the translation object for the current popup language. */
 export function useLang(): Translations {
   return useContext(LangContext);
 }

@@ -15,6 +15,7 @@ function hostnameOf(url: string): string | null {
 /** Three-state segment control: default / allow / block */
 type SiteState = 'default' | 'allow' | 'block';
 
+/** Three-state site control: allow / block current hostname via network-filter rules. */
 export function SiteSegmentCard({
   settings,
   isManaged,

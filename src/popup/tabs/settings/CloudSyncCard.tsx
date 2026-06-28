@@ -30,6 +30,7 @@ function generateMockKey(): string {
 
 type ConnectStatus = 'idle' | 'connecting' | 'connected';
 
+/** Card for connecting to Zenprax Cloud and triggering a policy sync. */
 export function CloudSyncCard({ isManaged }: { isManaged: boolean }) {
   const t = useLang();
   const [status, setStatus] = useState<ConnectStatus>('idle');
