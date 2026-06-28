@@ -25,7 +25,7 @@ import { buildDomainRules, DNR_DYNAMIC_RULE_LIMIT } from './domainRules';
 import { CONSOLE_CONFIG } from '../lib/consoleClient';
 
 chrome.runtime.onInstalled.addListener(async () => {
-  // 旧バージョンが残した平文資格情報を削除する（機密がディスクに残らないよう保証）。
+  // Remove plaintext credentials left by older versions (ensure no secrets remain on disk).
   await purgeLegacyCredentials();
   // Merge defaults in without clobbering any settings from a previous install.
   const current = await getSettings();
@@ -44,28 +44,28 @@ chrome.runtime.onMessage.addListener((message: KibaMessage, _sender, sendRespons
         message: message.message,
         priority: 1,
       });
-      return false; // 同期・応答不要。
+      return false; // Synchronous; no response needed.
 
     case 'kiba:get-credential':
       void getSettings().then(async (settings) => {
         const cred = await getCredentialFor(message.url, settings);
         sendResponse(cred);
       });
-      return true; // 非同期応答。
+      return true; // Asynchronous response.
 
     case 'kiba:request-bypass':
       void requestBypass(message.domain).then((grant) => sendResponse(grant));
-      return true; // 非同期応答。
+      return true; // Asynchronous response.
 
     case 'kiba:credential-status':
       sendResponse({
         configured: CONSOLE_CONFIG.credentialUrl !== null,
         count: getCredentialCount(),
       });
-      return false; // 同期応答。
+      return false; // Synchronous response.
 
     case 'kiba:request-sync':
-      // 個人用クラウド同期設定の保存直後に即時 pull する。応答は不要。
+      // Pull immediately right after saving personal cloud-sync settings. No response needed.
       void syncManagedPolicy();
       return false;
 
@@ -108,7 +108,7 @@ async function applyDynamicDomainRules(blockDomains: string[], allowlist: string
     chrome.declarativeNetRequest.ResourceType.IMAGE,
   ];
 
-  // allowlist を優先確保し、残り枠を blockDomains に割り当てて上限を超えないようにする。
+  // Reserve slots for the allowlist first, then assign the remainder to blockDomains so the limit is not exceeded.
   let trimmedBlock = blockDomains;
   let trimmedAllow = allowlist;
   const total = blockDomains.length + allowlist.length;

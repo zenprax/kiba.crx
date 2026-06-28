@@ -1,32 +1,33 @@
 /**
- * BYOK（顧客管理鍵）による AES-GCM 復号ユーティリティ。
+ * AES-GCM decryption utilities using BYOK (customer-managed keys).
  *
- * コンソールが配信する暗号化ポリシー／資格情報ペイロードを、顧客管理の対称鍵で
- * 復号するための純粋関数群。DOM/Chrome API に依存しないため単体テスト可能で、
- * `crypto.subtle` は Node / Service Worker / ブラウザいずれの `globalThis.crypto`
- * でも利用できる。
+ * Pure functions for decrypting the encrypted policy / credential payloads
+ * distributed by the console using a customer-managed symmetric key. They depend
+ * on no DOM/Chrome API, so they are unit-testable, and `crypto.subtle` is
+ * available via `globalThis.crypto` in Node / Service Worker / browser alike.
  *
- * 鍵は文字列のまま持ち回らず、必ず CryptoKey に変換して扱う。平文鍵を長く
- * メモリに留めないための方針。
+ * Keys are never carried around as strings; they are always converted to a
+ * CryptoKey before use. This policy avoids keeping plaintext keys in memory for
+ * long.
  */
 
-/** BYOK 鍵の参照。鍵そのものは平文 storage に置かず、参照のみを保持する。 */
+/** Reference to a BYOK key. The key itself is not placed in plaintext storage; only the reference is held. */
 export type KeyRef =
   { source: 'raw-base64'; value: string } | { source: 'storage'; storageKey: string };
 
-/** AES-GCM 暗号文の封筒構造（コンソールが返す JSON の想定形）。 */
+/** Envelope structure for AES-GCM ciphertext (the expected shape of the JSON the console returns). */
 export interface EncryptedEnvelope {
-  /** Base64 エンコードされた 12 バイトの初期化ベクトル（IV）。 */
+  /** Base64-encoded 12-byte initialization vector (IV). */
   iv: string;
-  /** Base64 エンコードされた暗号文（GCM 認証タグを含む）。 */
+  /** Base64-encoded ciphertext (includes the GCM authentication tag). */
   ciphertext: string;
 }
 
 /**
- * Base64 文字列を Uint8Array へ変換する。
+ * Converts a Base64 string to a Uint8Array.
  *
- * バッファを `ArrayBuffer` で確保することで、WebCrypto の BufferSource
- * （SharedArrayBuffer を許容しない）に直接渡せる型に固定する。
+ * By allocating the buffer as an `ArrayBuffer`, the type is fixed so it can be
+ * passed directly to WebCrypto's BufferSource (which does not allow SharedArrayBuffer).
  */
 export function base64ToBytes(b64: string): Uint8Array<ArrayBuffer> {
   const binary = atob(b64);
@@ -38,7 +39,7 @@ export function base64ToBytes(b64: string): Uint8Array<ArrayBuffer> {
   return bytes;
 }
 
-/** raw 鍵バイト列を AES-GCM 用の CryptoKey にインポートする。 */
+/** Imports raw key bytes as a CryptoKey for AES-GCM. */
 export async function importAesGcmKey(
   rawKey: Uint8Array<ArrayBuffer>,
   subtle: SubtleCrypto = crypto.subtle,
@@ -47,11 +48,11 @@ export async function importAesGcmKey(
 }
 
 /**
- * AES-GCM 封筒を復号し UTF-8 文字列を返す。鍵違い・改竄・IV 不正などの復号失敗は
- * `crypto.subtle` が例外を投げるため、呼び出し側はそれを破棄系のフォールバックに
- * 使える（不正なポリシーは適用しない）。
+ * Decrypts an AES-GCM envelope and returns a UTF-8 string. On decryption failure
+ * (wrong key, tampering, invalid IV, etc.) `crypto.subtle` throws, so the caller
+ * can use that as a discard-style fallback (do not apply invalid policy).
  *
- * `subtle` を引数で差し替え可能にしてテストを容易にしている。
+ * `subtle` is replaceable via an argument to make testing easy.
  */
 export async function decryptEnvelope(
   envelope: EncryptedEnvelope,

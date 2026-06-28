@@ -101,7 +101,7 @@ describe('detectTenant', () => {
         extract: { source: 'pathname' as const, regex: '/([a-z0-9]+)', group: 1 },
       },
     ];
-    // Slack URL は notion ルールにマッチしないので組み込み Slack 判定が効く。
+    // A Slack URL does not match the notion rule, so the built-in Slack detection applies.
     const ctx = detectTenant('https://app.slack.com/client/T0ZENPRAX/C1', rules);
     expect(ctx).toEqual({ provider: 'slack', tenantId: 'T0ZENPRAX', hostname: 'app.slack.com' });
   });

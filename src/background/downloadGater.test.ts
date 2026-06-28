@@ -1,5 +1,5 @@
 /**
- * Download Gater の判定ロジック（純粋関数）の単体テスト。
+ * Unit tests for the Download Gater decision logic (pure functions).
  *
  * @vitest-environment node
  */

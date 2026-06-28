@@ -1,23 +1,25 @@
 /**
- * 属性ベース（SAML/OIDC JWT）のポリシー仕分けロジック（DOM/Chrome 非依存）。
+ * Attribute-based (SAML/OIDC JWT) policy filtering logic (DOM/Chrome-independent).
  *
- * エンタープライズ版では、組織が配信する暗号化マスターポリシー
- * （{@link KibaMasterPolicy}）を、ユーザーの JWT claims（email / groups）で
- * 出し分け、その端末・そのユーザーに適用される実効設定をコンパイルする。
+ * In the enterprise edition, the encrypted master policy distributed by the
+ * organization ({@link KibaMasterPolicy}) is dispatched per user via JWT claims
+ * (email / groups), compiling the effective settings applied to that device and
+ * that user.
  *
- * 外部ライブラリは一切使用しない：
- *  - JWT デコードは `atob` + `JSON.parse` のみ（署名検証は IdP / 別レイヤー責務）。
- *  - 復号は `crypto.subtle`（AES-GCM）のネイティブ API のみ。
+ * No external libraries are used:
+ *  - JWT decoding uses only `atob` + `JSON.parse` (signature validation is the
+ *    responsibility of the IdP / another layer).
+ *  - Decryption uses only the native `crypto.subtle` (AES-GCM) API.
  *
- * すべて純粋関数で Chrome API に触れないため、単体テスト可能。
+ * All pure functions that never touch Chrome APIs, so it is unit-testable.
  */
 
 import { importAesGcmKey } from './crypto';
 import type { KibaMasterPolicy, KibaSettingsPatch, PolicyClaims, PolicyTarget } from '../types';
 
 /**
- * base64url（JWT で使われる）を標準 base64 へ補正してから `atob` でデコードする。
- * `-`→`+`、`_`→`/` に置換し、長さ 4 の倍数になるよう `=` パディングを補う。
+ * Normalizes base64url (used in JWTs) to standard base64, then decodes via `atob`.
+ * Replaces `-`->`+`, `_`->`/`, and adds `=` padding so the length is a multiple of 4.
  */
 function base64UrlDecode(segment: string): string {
   const normalized = segment.replace(/-/g, '+').replace(/_/g, '/');
@@ -26,11 +28,11 @@ function base64UrlDecode(segment: string): string {
 }
 
 /**
- * JWT のペイロード（2 番目のセグメント）を `atob` + `JSON.parse` だけでデコードする。
- * 署名検証は行わない（仕分け用に claims を読むだけ）。
+ * Decodes a JWT payload (the second segment) using only `atob` + `JSON.parse`.
+ * Does not validate the signature (just reads claims for filtering).
  *
- * トークンが 3 セグメント構成でない、base64 が壊れている、JSON が不正、などは
- * すべて null を返し、呼び出し側は空 claims としてフォールバックできる。
+ * Returns null when the token is not 3 segments, the base64 is broken, the JSON
+ * is invalid, etc., so the caller can fall back to empty claims.
  */
 export function decodeJwtPayload(token: string): PolicyClaims | null {
   try {
@@ -43,30 +45,31 @@ export function decodeJwtPayload(token: string): PolicyClaims | null {
     }
     return payload as PolicyClaims;
   } catch {
-    // base64 不正・JSON 不正など。仕分け不能として null を返す。
+    // Invalid base64, invalid JSON, etc. Return null as unfilterable.
     return null;
   }
 }
 
 /**
- * claims が target に一致するか判定する。emails と groups は OR で評価し、
- * いずれか 1 つでも一致すれば true。両方とも未指定（空ターゲット）は「全員」を
- * 意味し true を返す。email 比較は大文字小文字を無視する。
+ * Determines whether claims match the target. emails and groups are evaluated
+ * with OR; if any one matches, returns true. When both are unspecified (empty
+ * target), it means "everyone" and returns true. Email comparison is
+ * case-insensitive.
  */
 export function matchTarget(target: PolicyTarget, claims: PolicyClaims): boolean {
   const hasEmails = Array.isArray(target.emails) && target.emails.length > 0;
   const hasGroups = Array.isArray(target.groups) && target.groups.length > 0;
 
-  // 空ターゲットは全員一致。
+  // Empty target matches everyone.
   if (!hasEmails && !hasGroups) return true;
 
-  // email 一致（完全一致・小文字比較）。
+  // Email match (exact match, lowercase comparison).
   if (hasEmails && typeof claims.email === 'string') {
     const claimEmail = claims.email.toLowerCase();
     if (target.emails!.some((e) => e.toLowerCase() === claimEmail)) return true;
   }
 
-  // group 一致（いずれか 1 つでも claims.groups に含まれれば一致）。
+  // Group match (matches if any one is contained in claims.groups).
   if (hasGroups && Array.isArray(claims.groups)) {
     const claimGroups = claims.groups;
     if (target.groups!.some((g) => claimGroups.includes(g))) return true;
@@ -76,14 +79,14 @@ export function matchTarget(target: PolicyTarget, claims: PolicyClaims): boolean
 }
 
 /**
- * AES-GCM で暗号化されたバイナリ blob を復号し、{@link KibaMasterPolicy} を返す。
+ * Decrypts an AES-GCM encrypted binary blob and returns a {@link KibaMasterPolicy}.
  *
- * @param buffer 暗号文（GCM 認証タグを含む）の ArrayBuffer。
- * @param rawKey 生の対称鍵バイト列（BYOK）。
- * @param iv     12 バイトの初期化ベクトル。
+ * @param buffer ArrayBuffer of the ciphertext (includes the GCM authentication tag).
+ * @param rawKey Raw symmetric key bytes (BYOK).
+ * @param iv     12-byte initialization vector.
  *
- * 鍵違い・改竄・IV 不正などの復号失敗は `crypto.subtle` が例外を投げるため、
- * 呼び出し側はそれを「不正ポリシーは適用しない」フォールバックに使える。
+ * On decryption failure (wrong key, tampering, invalid IV, etc.) `crypto.subtle`
+ * throws, so the caller can use that as a "do not apply invalid policy" fallback.
  */
 export async function decryptPolicyBlob(
   buffer: ArrayBuffer,
@@ -97,23 +100,25 @@ export async function decryptPolicyBlob(
 }
 
 /**
- * マスターポリシーを claims でフィルタし、この端末・このユーザーに適用すべき
- * 設定パッチ（Partial<KibaSettings>）をコンパイルして返す。
+ * Filters the master policy by claims and compiles the settings patch
+ * (Partial<KibaSettings>) that should apply to this device and this user.
  *
- * 評価順：
- *  1. base を土台にする（全員共通）。
- *  2. overrides を配列順に評価し、target にマッチしたものを後勝ちでマージ。
+ * Evaluation order:
+ *  1. Use base as the foundation (common to everyone).
+ *  2. Evaluate overrides in array order, merging those whose target matches
+ *     with last-wins precedence.
  *
- * 必ず `isManaged: true` を立て（管理下である事実）、`auth.idToken` に渡された
- * idToken を載せる。ローカル専有フィールド（auditLog / oneTimeBypass）はパッチに
- * 含めず、既存ローカル値を保持させる（setSettings の浅マージで温存される）。
+ * Always sets `isManaged: true` (the fact of being managed) and places the
+ * passed idToken in `auth.idToken`. Local-exclusive fields (auditLog /
+ * oneTimeBypass) are excluded from the patch so existing local values are
+ * preserved (kept via the shallow merge in setSettings).
  */
 export function compileActiveSettings(
   masterPolicy: KibaMasterPolicy,
   claims: PolicyClaims,
   idToken: string,
 ): KibaSettingsPatch {
-  // base を土台にマッチした overrides を順次マージ（後勝ち）。
+  // Starting from base, merge matching overrides in sequence (last-wins).
   let merged: KibaSettingsPatch = { ...masterPolicy.base };
   for (const item of masterPolicy.overrides ?? []) {
     if (matchTarget(item.target, claims)) {
@@ -121,12 +126,13 @@ export function compileActiveSettings(
     }
   }
 
-  // ローカル専有フィールドはコンソールから来ても取り込まない。
+  // Local-exclusive fields are not adopted even if they come from the console.
   delete merged.auditLog;
   delete merged.oneTimeBypass;
 
-  // 管理下フラグを必ず立て、idToken を auth へ部分合成する（既存 auth との最終
-  // 合成は呼び出し側＝syncManager が行う。ここでは auth は部分のままで返す）。
+  // Always set the managed flag and partially merge idToken into auth (the final
+  // merge with existing auth is done by the caller = syncManager; here auth is
+  // returned in partial form).
   return {
     ...merged,
     isManaged: true,

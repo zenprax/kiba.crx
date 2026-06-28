@@ -1,59 +1,65 @@
 /**
- * コンソールから配信された復号済みポリシー JSON の検証（DOM/Chrome 非依存）。
+ * Validation of the decrypted policy JSON delivered by the console
+ * (no DOM/Chrome dependency).
  *
- * 復号後の `unknown` を、安全にマージ可能な `Partial<KibaSettings>` へ絞り込む。
- * 検証は Zod による宣言的スキーマで行い、`any` は使わない。不正な構造は丸ごと
- * 破棄（null を返し、呼び出し側はローカル既定を維持する）。
+ * Narrows the post-decryption `unknown` down to a safely mergeable
+ * `Partial<KibaSettings>`. Validation uses a declarative Zod schema and never
+ * uses `any`. Malformed structures are discarded wholesale (returns null; the
+ * caller keeps the local defaults).
  *
- * 重要: 資格情報（ssoCredentials は別経路＝credentialBroker）とローカル専有の
- * auditLog はマージ対象から除外する。コンソールが誤って送っても取り込まない。
- * スキーマにこれらのキーを定義しないため、Zod のデフォルト（未知キーは strip）で
- * 自動的に落ちる。
+ * Important: credentials (ssoCredentials travel a separate path —
+ * credentialBroker) and the locally-owned auditLog are excluded from the merge.
+ * They are not ingested even if the console sends them by mistake; since the
+ * schema does not declare those keys, Zod's default (strip unknown keys) drops
+ * them automatically.
  */
 
 import { z } from 'zod';
 import type { KibaAuthState, KibaSettings, TenantRuleDef, TenantWhitelistEntry } from '../types';
 
 /**
- * 信頼できない RegExp ソース文字列の上限（ReDoS 緩和の一次防衛）。
- * 実体化時には別途 patternCompiler が構造検証する。ここは粗いゲートのみ。
+ * Upper bound for an untrusted RegExp source string (first-line ReDoS
+ * mitigation). At instantiation time patternCompiler performs the structural
+ * validation; this is only a coarse gate.
  */
 const MAX_PATTERN_LEN = 512;
-/** OTA で配信できるカスタムパターン件数の上限（種別ごと）。 */
+/** Upper bound on OTA-delivered custom patterns (per kind). */
 const MAX_CUSTOM_PATTERNS = 64;
-/** OTA で配信できるテナントルール件数の上限。 */
+/** Upper bound on OTA-delivered tenant rules. */
 const MAX_TENANT_RULES = 128;
 
 const patternSourceSchema = z.string().min(1).max(MAX_PATTERN_LEN);
 
 /**
- * ポリシーパッチ。KibaSettings の浅い部分集合だが、auth だけは部分更新を許すため
- * Partial<KibaAuthState> として表現する（呼び出し側で既存 auth と合成する）。
+ * Policy patch. A shallow subset of KibaSettings, but `auth` allows partial
+ * updates so it is expressed as Partial<KibaAuthState> (the caller merges it
+ * into the existing auth).
  */
 export type PolicyPatch = Partial<Omit<KibaSettings, 'auth'>> & {
   auth?: Partial<KibaAuthState>;
 };
 
 /* ------------------------------------------------------------------ *
- * Zod スキーマ定義
+ * Zod schema definitions
  *
- * 型の真実源は src/types/index.ts の interface。ここではそれらを「検証する」
- * ためのスキーマのみを定義し、二重管理を避けるため z.infer での型再生成は
- * しない（各スキーマはトップレベル interface のサブセットと構造的に一致する）。
+ * The source of truth for the types is the interfaces in src/types. Here we only
+ * define schemas to *validate* them; to avoid double-maintenance we do not
+ * regenerate types via z.infer (each schema is structurally a subset of the
+ * corresponding top-level interface).
  * ------------------------------------------------------------------ */
 
 const tenantProviderSchema = z.enum(['slack', 'google', 'github', 'unknown']);
 const kibaModeSchema = z.enum(['ENFORCE', 'DRY_RUN']);
 const offlineStrategySchema = z.enum(['LOCKDOWN', 'FAIL_OPEN']);
 
-/** テナントホワイトリスト 1 件。 */
+/** A single tenant whitelist entry. */
 const tenantEntrySchema = z.object({
   provider: tenantProviderSchema,
   tenantId: z.string(),
   label: z.string(),
 }) satisfies z.ZodType<TenantWhitelistEntry>;
 
-/** 機能単位 DRY_RUN の上書きマップ。来た機能キーのみ採用する。 */
+/** Per-feature DRY_RUN override map. Only the feature keys that arrive are kept. */
 const featureModesSchema = z
   .object({
     paste: kibaModeSchema.optional(),
@@ -64,8 +70,9 @@ const featureModesSchema = z
   .strip();
 
 /**
- * OTA 配信のカスタムパターン群。RegExp ソースは長さ・件数を上限化する
- * （ReDoS 緩和の一次防衛。構造検証は実体化時の patternCompiler が担う）。
+ * OTA-delivered custom patterns. RegExp sources are bounded by length and count
+ * (first-line ReDoS mitigation; structural validation is handled by
+ * patternCompiler at instantiation time).
  */
 const customPatternsSchema = z
   .object({
@@ -77,7 +84,7 @@ const customPatternsSchema = z
   })
   .strip();
 
-/** OTA 配信のテナント抽出ルール 1 件。 */
+/** A single OTA-delivered tenant extraction rule. */
 const tenantRuleSchema = z.object({
   provider: z.string().min(1),
   hostMatch: z.string().min(1),
@@ -89,8 +96,9 @@ const tenantRuleSchema = z.object({
 }) satisfies z.ZodType<TenantRuleDef>;
 
 /**
- * auth の部分更新スキーマ。来たサブフィールド（offlineStrategy / ssoTtlExpiresAt）
- * のみを採用する。idToken はコンソール経由では受け取らない（ここに定義しない）。
+ * Partial-update schema for auth. Only the subfields that arrive
+ * (offlineStrategy / ssoTtlExpiresAt) are kept. idToken is never received via
+ * the console (not defined here).
  */
 const authPatchSchema = z
   .object({
@@ -100,12 +108,13 @@ const authPatchSchema = z
   .strip();
 
 /**
- * トップレベルの各フィールド（auth を除く）の検証スキーマ。フィールド単位で
- * safeParse することで、1 フィールドの型不一致が他フィールドの採用を妨げない
- * という旧 `typeof` ガードのパッチ意味論を再現する。
+ * Validation schemas for each top-level field (excluding auth). Calling
+ * safeParse per field reproduces the patch semantics of the old `typeof` guards:
+ * a type mismatch in one field does not prevent the others from being adopted.
  *
- * tenantWhitelist は配列全体を 1 スキーマで検証するため、1 件でも不正なら
- * フィールドごと失敗扱いとなり結果から落ちる（= 旧 every() と同値）。
+ * tenantWhitelist validates the whole array with a single schema, so if even one
+ * entry is invalid the whole field fails and is dropped from the result
+ * (equivalent to the old every()).
  */
 const fieldSchemas = {
   antiClickFixEnabled: z.boolean(),
@@ -115,7 +124,7 @@ const fieldSchemas = {
   mode: kibaModeSchema,
   tenantWhitelist: z.array(tenantEntrySchema),
   networkFilterEnabled: z.boolean(),
-  // --- 拡張機能群が OTA 配信する新フィールド（基盤ブランチで一括登録） ---
+  // --- New fields the feature branches deliver over OTA (registered together on the base branch) ---
   featureModes: featureModesSchema,
   customPatterns: customPatternsSchema,
   tenantRules: z.array(tenantRuleSchema).max(MAX_TENANT_RULES),
@@ -124,7 +133,7 @@ const fieldSchemas = {
   screenShareAuditEnabled: z.boolean(),
 } as const;
 
-/** undefined の値を持つキーを取り除いた浅いコピーを返す。 */
+/** Returns a shallow copy with keys whose value is undefined removed. */
 function pruneUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
   const out: Partial<T> = {};
   for (const [key, value] of Object.entries(obj)) {
@@ -134,30 +143,32 @@ function pruneUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
 }
 
 /**
- * 復号済みポリシーペイロードを検証し、マージ可能なパッチを返す。構造自体が不正
- * （オブジェクトでない等）なら null を返す。個々のフィールドは型が合致したものだけ
- * を採用し、合致しないフィールドは黙って捨てる（フェイルセーフ）。
+ * Validates a decrypted policy payload and returns a mergeable patch. Returns
+ * null if the structure itself is invalid (e.g. not an object). Individual
+ * fields are adopted only when their type matches; non-matching fields are
+ * silently discarded (fail-safe).
  */
 export function parsePolicyPayload(raw: unknown): PolicyPatch | null {
-  // 全体のパースは緩く: トップが非オブジェクトなら null、それ以外は各フィールドを
-  // 個別に safeParse して「通ったものだけ」採用する。これにより 1 フィールドの
-  // 型不一致で全体を捨てる事故を避けつつ、旧実装の挙動を再現する。
+  // Parse loosely overall: null if the top level is a non-object, otherwise
+  // safeParse each field individually and adopt only those that pass. This
+  // avoids discarding the whole payload over one field's type mismatch while
+  // reproducing the old implementation's behaviour.
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return null;
 
   const source = raw as Record<string, unknown>;
   const patch: PolicyPatch = {};
 
-  // フィールドごとに schema で検証し、型が合致したものだけ採用する。
+  // Validate each field against its schema and adopt only type-matching ones.
   for (const [key, schema] of Object.entries(fieldSchemas)) {
     if (!(key in source)) continue;
     const result = schema.safeParse(source[key]);
     if (result.success) {
-      // key は fieldSchemas のキーなので PolicyPatch の対応プロパティと一致する。
+      // key is a fieldSchemas key, so it matches the corresponding PolicyPatch property.
       (patch as Record<string, unknown>)[key] = result.data;
     }
   }
 
-  // auth は部分更新。来た有効サブフィールドのみを採用し、0 件なら含めない。
+  // auth is a partial update. Adopt only the valid subfields that arrive; omit if none.
   if ('auth' in source) {
     const result = authPatchSchema.safeParse(source.auth);
     if (result.success) {

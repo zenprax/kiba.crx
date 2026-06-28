@@ -270,7 +270,7 @@ export function Dashboard({
   );
 }
 
-/** 3状態セグメントコントロール: default / allow / block */
+/** Three-state segment control: default / allow / block */
 type SiteState = 'default' | 'allow' | 'block';
 
 function SiteSegmentCard({

@@ -80,7 +80,7 @@ export function Settings({ settings, isManaged, onUpdateSettings }: SettingsProp
         </div>
       </Card>
 
-      {/* Per-feature enforcement modes (機能単位 DRY_RUN) */}
+      {/* Per-feature enforcement modes (per-feature DRY_RUN) */}
       <FeatureModesCard
         settings={settings}
         isManaged={isManaged}
@@ -100,7 +100,7 @@ export function Settings({ settings, isManaged, onUpdateSettings }: SettingsProp
   );
 }
 
-/** popup ← 模擬 OAuth ポータルからの承認シグナル。 */
+/** Approval signal sent to the popup from the mock OAuth portal. */
 interface OAuthMockMessage {
   source: 'kiba-oauth';
   status: 'success';
@@ -115,7 +115,7 @@ function isOAuthMockMessage(data: unknown): data is OAuthMockMessage {
   );
 }
 
-/** ランダムな 32 バイトの模擬復号鍵を Base64 で生成する。 */
+/** Generates a random 32-byte mock decryption key encoded as Base64. */
 function generateMockKey(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(32));
   let binary = '';
@@ -125,7 +125,7 @@ function generateMockKey(): string {
 
 type ConnectStatus = 'idle' | 'connecting' | 'connected';
 
-/** Lock アイコン付きの「組織ポリシーで読み取り専用」警告バナー。 */
+/** "Read-only under organization policy" warning banner with a Lock icon. */
 function ManagedNote({ text }: { text: string }) {
   return (
     <div className="mt-zp-2 flex items-center gap-zp-2 rounded-zp-lg border border-border-default bg-bg-surface px-zp-3 py-zp-2 text-zp-sm font-semibold text-brand-primary">
@@ -161,7 +161,7 @@ function CloudSyncCard({ isManaged }: { isManaged: boolean }) {
       if (!isOAuthMockMessage(event.data)) return;
       window.removeEventListener('message', onMessage);
 
-      // 認証成功シグナル受領 → ID/鍵を自動生成して保存し、即時同期する。
+      // Auth success signal received -> auto-generate and save the ID/key, then sync immediately.
       const customPolicyId = crypto.randomUUID();
       const decryptionKey = generateMockKey();
       await chrome.storage.local.set({ customPolicyId, decryptionKey });
@@ -171,7 +171,7 @@ function CloudSyncCard({ isManaged }: { isManaged: boolean }) {
 
     window.addEventListener('message', onMessage);
 
-    // ポータルがキャンセル/クローズされた場合に idle へ戻すための監視。
+    // Watch for the portal being cancelled/closed in order to revert to idle.
     if (portal) {
       const timer = window.setInterval(() => {
         if (portal.closed) {
@@ -221,7 +221,7 @@ function CloudSyncCard({ isManaged }: { isManaged: boolean }) {
   );
 }
 
-/** 機能別の実施モード（ENFORCE / DRY_RUN / 全体設定に従う）切替カード。 */
+/** Card for switching per-feature enforcement mode (ENFORCE / DRY_RUN / follow global setting). */
 function FeatureModesCard({
   settings,
   isManaged,
@@ -241,7 +241,7 @@ function FeatureModesCard({
     { key: 'download', label: t.settings.featureDownload },
   ];
 
-  // 'global' は該当キーを削除して全体 mode にフォールバックさせる擬似値。
+  // 'global' is a pseudo-value that deletes the relevant key to fall back to the global mode.
   type Choice = KibaMode | 'global';
 
   async function setFeatureMode(key: DryRunFeature, choice: Choice) {

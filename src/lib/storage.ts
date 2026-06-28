@@ -44,11 +44,13 @@ export async function addAuditLog(
 }
 
 /**
- * 旧バージョンが平文で保存していた SSO 資格情報（`ssoCredentials` キー）を、
- * 起動時に 1 度だけ storage から削除する。資格情報は本番では background の
- * メモリ常駐キャッシュにのみ保持され、平文で永続化されることはない。
+ * Removes from storage, once at startup, the SSO credentials (`ssoCredentials`
+ * key) that older versions stored in plaintext. In production, credentials are
+ * held only in the background's memory-resident cache and are never persisted in
+ * plaintext.
  *
- * 更新インストール後に古い平文機密が残らないことを保証するためのマイグレーション。
+ * A migration to guarantee that no stale plaintext secrets remain after an
+ * update install.
  */
 export async function purgeLegacyCredentials(): Promise<void> {
   const result = await chrome.storage.local.get(SETTINGS_KEY);
@@ -60,11 +62,13 @@ export async function purgeLegacyCredentials(): Promise<void> {
 }
 
 /**
- * ローカルの監査ログを endpoint へ POST し、送信成功分をローカルから削除する。
+ * POSTs the local audit log to the endpoint and removes the successfully sent
+ * entries from local storage.
  *
- * - 送信成功時のみローカルを変更する（べき等：失敗しても次回のフラッシュで再試行）。
- * - chunkSize 件ずつ送信して単一リクエストのペイロードサイズを制限する。
- * - 送信成功件数を返す（0 は送信なし or 失敗）。
+ * - Modifies local storage only on successful send (idempotent: on failure it
+ *   retries on the next flush).
+ * - Sends chunkSize entries at a time to limit the payload size of a single request.
+ * - Returns the number of successfully sent entries (0 means nothing sent or failure).
  */
 export async function flushAuditQueue(endpoint: string, chunkSize = 50): Promise<number> {
   const current = await getSettings();

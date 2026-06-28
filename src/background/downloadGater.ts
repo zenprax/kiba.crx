@@ -1,29 +1,31 @@
 /**
- * Feature: Download Gater（未承認ドメインからのダウンロード制御）。
+ * Feature: Download Gater (controls downloads from unapproved domains).
  *
- * アップロード（持ち出し）だけでなく、未承認 SaaS からのダウンロード（マルウェアの
- * 持ち込み・不正なデータ取得）もリスク。chrome.downloads.onCreated で開始を検知し、
- * 未承認ドメインからのダウンロードを chrome.downloads.pause で一時停止する。OS 通知の
- * 「許可 / キャンセル」ボタンで、承認なら resume、却下なら cancel する。
+ * Not only uploads (exfiltration) but also downloads from unapproved SaaS
+ * (malware ingress, illicit data retrieval) are a risk. Detects the start via
+ * chrome.downloads.onCreated and pauses downloads from unapproved domains with
+ * chrome.downloads.pause. The OS notification's "Allow / Cancel" buttons resume
+ * on approval and cancel on rejection.
  *
- * DRY_RUN（download 機能モード）では pause せず監査ログのみ記録する。
+ * Under DRY_RUN (download feature mode), it does not pause and only records an
+ * audit log entry.
  *
- * 判定ロジックの純粋関数（shouldGateDownload / extractDownloadHost）は DOM/Chrome
- * 非依存で単体テスト可能（downloadGater.test.ts）。
+ * The pure decision functions (shouldGateDownload / extractDownloadHost) are
+ * DOM/Chrome-independent and unit-testable (downloadGater.test.ts).
  */
 
 import { isDryRun, tagDetail } from '../lib/dryRun';
 import { addAuditLog, getSettings } from '../lib/storage';
 import type { KibaSettings } from '../types';
 
-/** 通知 ID → 一時停止中のダウンロード ID。承認/却下ボタン処理で参照する。 */
+/** Notification ID -> paused download ID. Referenced by the approve/reject button handlers. */
 const pendingByNotification = new Map<string, number>();
-/** 通知 ID プレフィックス（他機能の通知と区別する）。 */
+/** Notification ID prefix (distinguishes these from other features' notifications). */
 const NOTIF_PREFIX = 'kiba:download-gate:';
 
 /**
- * ダウンロードの「出所ホスト名」を取り出す。finalUrl > url > referrer の順で
- * 最初に解釈できたものを使う。解釈不能なら null。
+ * Extracts the download's "origin hostname". Uses the first one that parses, in
+ * the order finalUrl > url > referrer. Returns null if none can be parsed.
  */
 export function extractDownloadHost(item: {
   finalUrl?: string;
@@ -35,23 +37,23 @@ export function extractDownloadHost(item: {
     try {
       return new URL(candidate).hostname;
     } catch {
-      // 次の候補へ。
+      // Try the next candidate.
     }
   }
   return null;
 }
 
-/** host が allowlist に載っているか（完全一致 or サブドメイン一致）。 */
+/** Whether host is on the allowlist (exact match or subdomain match). */
 function isAllowedHost(host: string, allowlist: string[]): boolean {
   return allowlist.some((d) => host === d || host.endsWith(`.${d}`));
 }
 
 /**
- * このダウンロードをゲート（一時停止・確認）すべきか判定する純粋関数。
- *  - Download Gater 無効 → false
- *  - ホスト不明 → false（判定材料が無いものは通す＝誤ブロック回避）
- *  - allowlist 一致 → false
- *  - それ以外 → true
+ * Pure function deciding whether this download should be gated (paused/confirmed).
+ *  - Download Gater disabled -> false
+ *  - Unknown host -> false (allow through when there's nothing to judge = avoid false blocks)
+ *  - allowlist match -> false
+ *  - otherwise -> true
  */
 export function shouldGateDownload(
   host: string | null,
@@ -70,8 +72,8 @@ async function onDownloadCreated(item: chrome.downloads.DownloadItem): Promise<v
 
   const hostname = host ?? 'unknown';
 
-  // DRY_RUN: 一時停止せず記録のみ。（機能単位 DRY_RUN がマージされたら
-  // isDryRunFor(settings, 'download') へ差し替え可能。）
+  // DRY_RUN: record only, without pausing. (Once per-feature DRY_RUN is merged,
+  // this can be swapped to isDryRunFor(settings, 'download').)
   if (isDryRun(settings)) {
     void addAuditLog(
       'download-block',
@@ -81,11 +83,11 @@ async function onDownloadCreated(item: chrome.downloads.DownloadItem): Promise<v
     return;
   }
 
-  // ENFORCE: 一時停止して確認を求める。
+  // ENFORCE: pause and prompt for confirmation.
   try {
     await chrome.downloads.pause(item.id);
   } catch {
-    return; // すでに完了/中断などで pause できない場合は何もしない。
+    return; // Do nothing if it can't be paused (already completed/interrupted, etc.).
   }
 
   void addAuditLog(
@@ -107,7 +109,7 @@ async function onDownloadCreated(item: chrome.downloads.DownloadItem): Promise<v
   });
 }
 
-/** 通知ボタン押下を処理する。button 0 = Allow（resume）、1 = Cancel。 */
+/** Handles a notification button press. button 0 = Allow (resume), 1 = Cancel. */
 async function onNotificationButton(notificationId: string, buttonIndex: number): Promise<void> {
   const downloadId = pendingByNotification.get(notificationId);
   if (downloadId === undefined) return;
@@ -121,11 +123,11 @@ async function onNotificationButton(notificationId: string, buttonIndex: number)
       await chrome.downloads.cancel(downloadId);
     }
   } catch {
-    // ダウンロードがすでに無効化されている等は無視。
+    // Ignore cases such as the download already being invalidated.
   }
 }
 
-/** 通知本体クリック（ボタン以外）は安全側＝キャンセル扱いで閉じる。 */
+/** A click on the notification body (not a button) closes it on the safe side = treated as cancel. */
 async function onNotificationClicked(notificationId: string): Promise<void> {
   if (!notificationId.startsWith(NOTIF_PREFIX)) return;
   const downloadId = pendingByNotification.get(notificationId);
@@ -135,11 +137,11 @@ async function onNotificationClicked(notificationId: string): Promise<void> {
   try {
     await chrome.downloads.cancel(downloadId);
   } catch {
-    // 無視。
+    // Ignore.
   }
 }
 
-/** Download Gater のリスナを配線する。background 起動時に 1 度呼ぶ。 */
+/** Wires up the Download Gater listeners. Call once at background startup. */
 export function initDownloadGater(): void {
   chrome.downloads.onCreated.addListener((item) => void onDownloadCreated(item));
   chrome.notifications.onButtonClicked.addListener(

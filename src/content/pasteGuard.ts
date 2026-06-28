@@ -32,8 +32,9 @@ import { showDangerOverlay } from './overlay';
 const HOSTNAME = window.location.hostname;
 
 /**
- * クリップボードの text/html 中のテキストノードをマスクし、書式を保持したHTML文字列を返す。
- * text/html が空または DOMParser でパース失敗の場合は null を返す。
+ * Masks the text nodes within the clipboard's text/html and returns an HTML
+ * string with formatting preserved. Returns null when text/html is empty or
+ * DOMParser fails to parse it.
  */
 function sanitizeHtmlClipboard(
   html: string,
@@ -87,8 +88,9 @@ export function initPasteGuard(getSettings: () => KibaSettings | null): () => vo
 
     const selectedText = window.getSelection()?.toString() ?? '';
 
-    // Stage 1: dangerous OS commands are always fully blocked. 組み込み + OTA
-    // カスタムの危険パターンで照合し、'paste' 機能モード（未設定時は全体 mode）に従う。
+    // Stage 1: dangerous OS commands are always fully blocked. Matched against
+    // built-in + OTA custom danger patterns, following the 'paste' feature mode
+    // (falls back to the global mode when unset).
     if (isDangerousPaste(selectedText, getActiveDangerPatterns(settings))) {
       const dryRun = isDryRunFor(settings, 'paste');
       const detail = tagDetail(describePasteThreat(selectedText), dryRun);
@@ -125,7 +127,7 @@ export function initPasteGuard(getSettings: () => KibaSettings | null): () => vo
     event.preventDefault();
     event.stopPropagation();
 
-    // text/html が存在する場合はテキストノードのみマスクして書式を保持する。
+    // When text/html is present, mask only the text nodes to preserve formatting.
     const rawHtml = event.clipboardData?.getData('text/html') ?? '';
     const htmlMasked = rawHtml ? sanitizeHtmlClipboard(rawHtml, activePatterns) : null;
     if (htmlMasked) {

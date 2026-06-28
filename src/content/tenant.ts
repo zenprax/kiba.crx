@@ -2,7 +2,7 @@
  * Tenant-context helpers for the content script (Feature A).
  *
  * Decides whether the current page is a *restricted context* — i.e. a foreign
- * ("他社") tenant on a known SaaS, or (for unknown providers) a host that is not
+ * (foreign) tenant on a known SaaS, or (for unknown providers) a host that is not
  * on the domain whitelist. Pure-ish: state is passed in via `settings` rather
  * than read from a module-level variable, so callers control the source.
  */

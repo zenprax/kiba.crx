@@ -18,11 +18,13 @@ export function isDryRun(settings: Pick<KibaSettings, 'mode'> | null | undefined
 }
 
 /**
- * 機能単位の enforcement モード。`featureModes` に該当機能の上書きがあればそれを、
- * なければグローバルな `mode` を採用する。これにより「ファイルは ENFORCE のまま
- * ペースト検知だけ DRY_RUN」といった機能ごとのパイロット運用ができる。
+ * Per-feature enforcement mode. If `featureModes` has an override for the
+ * feature, use it; otherwise adopt the global `mode`. This enables per-feature
+ * pilot operation such as "keep files at ENFORCE while only paste detection runs
+ * in DRY_RUN".
  *
- * 後方互換: `featureModes` 未設定（既存ユーザー）なら全機能が従来どおり `mode` に従う。
+ * Backward compatible: if `featureModes` is unset (existing users), all features
+ * follow `mode` as before.
  */
 export type DryRunFeature = 'paste' | 'file' | 'tenant' | 'download';
 

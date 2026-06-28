@@ -1,30 +1,32 @@
 /**
- * Popup 用の設定フック。
+ * Settings hook for the popup.
  *
- * chrome.storage.local の読み込み（getSettings）と変更購読（onSettingsChanged）を
- * 内包し、UI コンポーネントを純粋なプレゼンテーション層に保つ。永続化ロジックは
- * lib/storage.ts に集約済みで、本フックはその上の薄い React アダプタにすぎない。
+ * Encapsulates reading chrome.storage.local (getSettings) and subscribing to
+ * changes (onSettingsChanged), keeping the UI components a pure presentation
+ * layer. The persistence logic is consolidated in lib/storage.ts, and this hook
+ * is merely a thin React adapter on top of it.
  */
 
 import { useCallback, useEffect, useState } from 'react';
 import { DEFAULT_SETTINGS, type KibaSettings } from '../../types';
 import { getSettings, onSettingsChanged, setSettings } from '../../lib/storage';
 
-/** useKibaSettings の戻り値。 */
+/** Return value of useKibaSettings. */
 export interface UseKibaSettings {
-  /** 現在の設定（初期値は DEFAULT_SETTINGS、ロード完了で実値へ）。 */
+  /** Current settings (initially DEFAULT_SETTINGS, replaced with real values once loaded). */
   settings: KibaSettings;
-  /** 初回ロードが完了していなければ true。 */
+  /** True until the initial load completes. */
   loading: boolean;
-  /** 部分更新を永続化し、ローカル state も即時反映する。 */
+  /** Persists a partial update and immediately reflects it in local state. */
   updateSettings: (patch: Partial<KibaSettings>) => Promise<void>;
 }
 
 /**
- * 設定の初期ロードと storage 変更購読を行うフック。
+ * Hook that performs the initial settings load and subscribes to storage changes.
  *
- * onSettingsChanged により background / 他サーフェスからの更新も自動で反映される
- * ため、updateSettings 後の手動同期は不要だが、即時反応性のため setLocal も呼ぶ。
+ * Because onSettingsChanged automatically reflects updates from the background
+ * and other surfaces, manual syncing after updateSettings is unnecessary, but
+ * setLocal is still called for immediate responsiveness.
  */
 export function useKibaSettings(): UseKibaSettings {
   const [settings, setLocal] = useState<KibaSettings>(DEFAULT_SETTINGS);

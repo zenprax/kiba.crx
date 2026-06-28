@@ -1,15 +1,17 @@
 /**
- * kiba.crx の注入オーバーレイ／ファイルバイパスモーダル用スタイル。
+ * Styles for kiba.crx's injected overlay / file-bypass modal.
  *
- * これらは Shadow Root 内に <style> として注入されるため、ホストページの CSS とは
- * 完全に隔離される（こちらのスタイルもホストページへ漏れない）。
+ * These are injected as a <style> inside the Shadow Root, so they are fully
+ * isolated from the host page's CSS (and these styles never leak to the host
+ * page either).
  *
- * 色・影・余白・角丸・フォントサイズはすべて @zenprax/design-tokens 由来の CSS
- * カスタムプロパティ（`--zp-*`）を参照する。これらの変数は overlay.tsx が
- * `cssVariables('dark', ':host')` と `getTheme('dark')` から組み立てて :host へ
- * 注入する。ここに生の色コード・生の rgba・生のサイズ値は書かない
- * （唯一の例外は「器」の最大幅 min(420px, 90vw)）。
- * Tailwind は意図的に使わない（ホストページはこちらの Tailwind ビルドを読み込まない）。
+ * Colors, shadows, spacing, radii, and font sizes all reference CSS custom
+ * properties (`--zp-*`) derived from @zenprax/design-tokens. overlay.tsx builds
+ * these variables from `cssVariables('dark', ':host')` and `getTheme('dark')`
+ * and injects them into :host. Do not write raw color codes, raw rgba, or raw
+ * size values here (the only exception is the container's max width
+ * min(420px, 90vw)). Tailwind is intentionally not used (the host page does not
+ * load our Tailwind build).
  */
 export const OVERLAY_CSS = `
 .kiba-overlay-root {
@@ -112,8 +114,9 @@ export const OVERLAY_CSS = `
 }
 
 /* ------------------------------------------------------------------ *
- * Toast 表示（DangerOverlay 用）: 暗幕なしで画面右下に出す。裏の情報を
- * 確認しながら閲覧できる。scrim を持たないため pointer-events も背面に通す。
+ * Toast display (for DangerOverlay): shown at the bottom-right with no scrim,
+ * so the page behind stays visible. Having no scrim, pointer-events also pass
+ * through to the page behind.
  * ------------------------------------------------------------------ */
 .kiba-toast-root {
   position: fixed;
@@ -123,17 +126,17 @@ export const OVERLAY_CSS = `
   align-items: flex-end;
   justify-content: flex-end;
   padding: var(--zp-space-card-x);
-  pointer-events: none; /* 背面のページ操作を妨げない */
+  pointer-events: none; /* do not block interaction with the page behind */
   font-family: Inter, system-ui, -apple-system, sans-serif;
 }
 
 .kiba-toast-root .kiba-card {
-  pointer-events: auto; /* カード自体は操作可能 */
+  pointer-events: auto; /* the card itself remains interactive */
   animation: kiba-slide-in 160ms ease-out;
 }
 
 /* ------------------------------------------------------------------ *
- * ドラッグ可能ヘッダ（RequestBypassModal 用）。
+ * Draggable header (for RequestBypassModal).
  * ------------------------------------------------------------------ */
 .kiba-card__drag {
   display: flex;

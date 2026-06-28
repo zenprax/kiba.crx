@@ -30,7 +30,7 @@ export function AntiClickFixTab({ settings }: { settings: KibaSettings }) {
         </ul>
       </Card>
 
-      {/* 組織が OTA 配信したカスタムパターン（あれば表示）。 */}
+      {/* Custom patterns delivered OTA by the organization (shown if any). */}
       <Card>
         <div className="flex items-center gap-zp-2">
           <Sparkles className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden />

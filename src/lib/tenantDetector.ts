@@ -69,9 +69,10 @@ export function extractGithubOrg(pathname: string): string | null {
  * Identifies the tenant context for a URL string. Never throws: invalid input
  * yields `{ provider: 'unknown', tenantId: null, hostname: '' }`.
  *
- * `rules`（OTA 配信のテナント抽出ルール）が渡された場合は先にそれを評価し、
- * いずれかにマッチ（provider !== 'unknown'）すればその結果を返す。マッチしない
- * 場合は従来の組み込み Slack/Google/GitHub 判定にフォールバックする（後方互換）。
+ * When `rules` (OTA-distributed tenant-extraction rules) are passed, they are
+ * evaluated first, and if any matches (provider !== 'unknown') that result is
+ * returned. When none match, it falls back to the existing built-in
+ * Slack/Google/GitHub detection (backward compatible).
  */
 export function detectTenant(url: string, rules?: TenantRuleDef[]): TenantContext {
   if (rules && rules.length > 0) {

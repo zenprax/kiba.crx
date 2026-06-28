@@ -1,19 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import { base64ToBytes, decryptEnvelope, importAesGcmKey, type EncryptedEnvelope } from './crypto';
 
-/** ArrayBuffer 固定のランダムバイト列を生成するヘルパー（WebCrypto 型整合のため）。 */
+/** Helper that generates ArrayBuffer-backed random bytes (for WebCrypto type consistency). */
 function randomBytes(length: number): Uint8Array<ArrayBuffer> {
   return crypto.getRandomValues(new Uint8Array(new ArrayBuffer(length)));
 }
 
-/** バイト列を Base64 へ変換するテスト用ヘルパー（本体は復号専用のため）。 */
+/** Test helper that converts bytes to Base64 (the module itself is decrypt-only). */
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = '';
   for (const b of bytes) binary += String.fromCharCode(b);
   return btoa(binary);
 }
 
-/** 平文を AES-GCM で暗号化し封筒を返すテスト用ヘルパー。 */
+/** Test helper that AES-GCM-encrypts plaintext and returns an envelope. */
 async function encrypt(
   plaintext: string,
   rawKey: Uint8Array<ArrayBuffer>,
@@ -63,7 +63,7 @@ describe('decryptEnvelope', () => {
   it('暗号文が改竄されていると例外を投げる', async () => {
     const rawKey = randomBytes(32);
     const envelope = await encrypt('secret', rawKey);
-    // 暗号文の末尾バイトを反転させて改竄する。
+    // Tamper by flipping the last byte of the ciphertext.
     const tampered = base64ToBytes(envelope.ciphertext);
     tampered[tampered.length - 1] ^= 0xff;
     const broken: EncryptedEnvelope = {

@@ -24,7 +24,7 @@ describe('isDryRunFor', () => {
   });
 
   it('該当機能の上書きがあればそれを優先する', () => {
-    // 全体は ENFORCE だがペーストだけ DRY_RUN。
+    // Global mode is ENFORCE, but paste alone is DRY_RUN.
     const s = { mode: 'ENFORCE', featureModes: { paste: 'DRY_RUN' } } as const;
     expect(isDryRunFor(s, 'paste')).toBe(true);
     expect(isDryRunFor(s, 'file')).toBe(false); // 上書きなし → ENFORCE

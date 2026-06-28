@@ -1,8 +1,9 @@
 /**
- * 画面共有監査の isolated-world リスナのテスト。
+ * Tests for the isolated-world listener of screen-share auditing.
  *
- * ページからの偽 postMessage を拒否し、正規のマーカー付きメッセージのみで
- * addAuditLog を呼ぶことを検証する。軽量 fake DOM（node 環境）で動かす。
+ * Verifies that forged postMessages from the page are rejected and that
+ * addAuditLog is called only for legitimate marker-bearing messages. Runs on a
+ * lightweight fake DOM (node environment).
  *
  * @vitest-environment node
  */
@@ -17,10 +18,10 @@ vi.mock('../lib/storage', () => ({
   addAuditLog: (...args: unknown[]) => addAuditLog(...args),
 }));
 
-/** message リスナのレジストリ（window.addEventListener を模倣）。 */
+/** Registry of message listeners (mimics window.addEventListener). */
 const messageHandlers: Array<(e: MessageEvent<unknown>) => void> = [];
 
-/** MessageEvent ライクなオブジェクトを組み立てて全リスナへ流す。 */
+/** Builds a MessageEvent-like object and dispatches it to all listeners. */
 function dispatchMessage(partial: { data: unknown; source?: unknown; origin?: string }): void {
   const event = {
     data: partial.data,

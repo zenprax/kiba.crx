@@ -1,17 +1,20 @@
 /**
- * 組織のマスターポリシー（GPO/MDM）配下かどうかを判定するフック。
+ * Hook that determines whether the device is under an organization master
+ * policy (GPO/MDM).
  *
- * 判定の真実源 1: chrome.storage.managed の policyId。managed ストレージ非対応の
- * 環境（個人 Chrome 等）では get が例外を投げる/空を返すため、その場合は false。
+ * Source of truth 1: the policyId in chrome.storage.managed. In environments
+ * that do not support managed storage (e.g. personal Chrome), get throws or
+ * returns empty, in which case the result is false.
  */
 
 import { useEffect, useState } from 'react';
 
 /**
- * managed ストレージに policyId が配備されているかを返す。
+ * Returns whether a policyId is deployed in managed storage.
  *
- * これは「管理ロック」判定の一要素にすぎない。実効的なロックは呼び出し側で
- * compileActiveSettings 由来の settings.isManaged との OR で評価する。
+ * This is only one factor in the "managed lock" determination. The effective
+ * lock is evaluated by the caller as an OR with settings.isManaged derived from
+ * compileActiveSettings.
  */
 export function useManagedPolicy(): boolean {
   const [managedByPolicy, setManagedByPolicy] = useState(false);
