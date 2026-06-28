@@ -6,3 +6,4 @@ export { Toggle } from './Toggle';
 export { TenantList } from './TenantList';
 export { ShieldWrap } from './ShieldWrap';
 export { FeedBar } from './FeedBar';
+export { SiteSegmentCard } from './SiteSegmentCard';
