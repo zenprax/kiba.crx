@@ -10,12 +10,12 @@
  * When unset (null) this is a no-op and the local default policy is retained.
  */
 
-import { base64ToBytes, decryptEnvelope, type EncryptedEnvelope } from '../lib/crypto';
+import { decryptEnvelope, decryptEnvelopeWithKey, type EncryptedEnvelope, type EnvelopePayload } from '../lib/crypto';
 import { CONSOLE_CONFIG, resolveKey } from '../lib/consoleClient';
 import { parsePolicyPayload } from '../lib/policySchema';
-import { compileActiveSettings, decodeJwtPayload, decryptPolicyBlob } from '../lib/policyFilter';
+import { compileActiveSettings, decodeJwtPayload } from '../lib/policyFilter';
 import { addAuditLog, flushAuditQueue, getSettings, setSettings } from '../lib/storage';
-import type { KibaSettings, KibaSettingsPatch, PolicyClaims } from '../types';
+import type { KibaSettings, KibaSettingsPatch, KibaMasterPolicy, PolicyClaims } from '../types';
 
 /** chrome.alarms name used to schedule periodic policy pulls. */
 const SYNC_ALARM = 'kiba:sync';
@@ -117,14 +117,14 @@ async function resolveRawKey(): Promise<Uint8Array<ArrayBuffer> | null> {
 }
 
 /**
- * Enterprise path: using policyId, fetches the encrypted master policy
- * (policy.bin) and the decryption IV (iv.txt) in parallel, decrypts with the
- * BYOK key, then attribute-filters by the current user's JWT claims and applies.
+ * Enterprise path: fetches the two-layer envelope payload (policy.json) for the
+ * resolved policyId, decrypts it locally using the BYOK master key, then
+ * attribute-filters by the current user's JWT claims and applies the result.
  *
  * Design notes:
- *  - Fetches policy.bin and iv.txt in parallel via Promise.all to save RTT.
- *  - iv.txt is Base64-encoded 12-byte IV text.
- *  - The BYOK key is normalized to 32 bytes by hashing with SHA-256.
+ *  - Single fetch for policy.json (EnvelopePayload JSON) — no separate iv.txt.
+ *  - Two-layer decryption: K_master unwraps K_data, K_data decrypts the policy.
+ *  - All crypto runs locally in the extension; the server is a stateless blob store.
  *  - When policyId is absent, falls back to the CONSOLE_CONFIG path ({@link syncPolicy}).
  *  - Fetch/decryption/parse failures are all swallowed, keeping the local state as-is.
  */
@@ -142,27 +142,16 @@ export async function syncManagedPolicy(): Promise<void> {
 
   try {
     const encodedId = encodeURIComponent(policyId);
-    const policyBinUrl = `${POLICY_BASE_URL}/${encodedId}/policy.bin`;
-    const ivTxtUrl = `${POLICY_BASE_URL}/${encodedId}/iv.txt`;
+    const policyJsonUrl = `${POLICY_BASE_URL}/${encodedId}/policy.json`;
 
-    // Fetch policy.bin (binary) and iv.txt (plaintext Base64) in parallel.
-    const [blobRes, ivRes] = await Promise.all([
-      fetch(policyBinUrl, { cache: 'no-store' }),
-      fetch(ivTxtUrl, { cache: 'no-store' }),
-    ]);
+    const res = await fetch(policyJsonUrl, { cache: 'no-store' });
+    if (!res.ok) return;
 
-    if (!blobRes.ok || !ivRes.ok) return;
+    const payload = (await res.json()) as EnvelopePayload;
 
-    // iv.txt: convert the Base64 string into a 12-byte Uint8Array.
-    const ivB64 = (await ivRes.text()).trim();
-    const iv = base64ToBytes(ivB64) as Uint8Array<ArrayBuffer>;
-
-    // policy.bin: ArrayBuffer of ciphertext (including the GCM auth tag).
-    const ciphertext = await blobRes.arrayBuffer();
-    if (ciphertext.byteLength === 0) return;
-
-    // AES-GCM decrypt with the BYOK key (SHA-256 hashed, 32 bytes).
-    const masterPolicy = await decryptPolicyBlob(ciphertext, rawKey, iv);
+    // Two-layer decryption: K_master → K_data → plaintext. All crypto runs locally.
+    const plaintext = await decryptEnvelopeWithKey(payload, rawKey);
+    const masterPolicy = JSON.parse(plaintext) as KibaMasterPolicy;
 
     // Filter by the current user's JWT claims (auth.idToken in storage).
     const settings = await getSettings();

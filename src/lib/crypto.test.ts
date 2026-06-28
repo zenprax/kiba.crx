@@ -1,16 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { base64ToBytes, decryptEnvelope, importAesGcmKey, type EncryptedEnvelope } from './crypto';
+import {
+  base64ToBytes,
+  bytesToBase64,
+  decryptEnvelope,
+  decryptEnvelopeWithKey,
+  encryptEnvelope,
+  importAesGcmKey,
+  type EncryptedEnvelope,
+} from './crypto';
 
 /** Helper that generates ArrayBuffer-backed random bytes (for WebCrypto type consistency). */
 function randomBytes(length: number): Uint8Array<ArrayBuffer> {
   return crypto.getRandomValues(new Uint8Array(new ArrayBuffer(length)));
-}
-
-/** Test helper that converts bytes to Base64 (the module itself is decrypt-only). */
-function bytesToBase64(bytes: Uint8Array): string {
-  let binary = '';
-  for (const b of bytes) binary += String.fromCharCode(b);
-  return btoa(binary);
 }
 
 /** Test helper that AES-GCM-encrypts plaintext and returns an envelope. */
@@ -73,5 +74,51 @@ describe('decryptEnvelope', () => {
 
     const key = await importAesGcmKey(rawKey);
     await expect(decryptEnvelope(broken, key)).rejects.toThrow();
+  });
+});
+
+describe('encryptEnvelope / decryptEnvelopeWithKey', () => {
+  it('ラウンドトリップで元の平文に戻る', async () => {
+    const rawMasterKey = randomBytes(32);
+    const plaintext = '{"version":1,"base":{"mode":"BLOCK"}}';
+    const payload = await encryptEnvelope(plaintext, rawMasterKey);
+    await expect(decryptEnvelopeWithKey(payload, rawMasterKey)).resolves.toBe(plaintext);
+  });
+
+  it('誤ったK_masterでは復号に失敗して例外を投げる', async () => {
+    const rawMasterKey = randomBytes(32);
+    const wrongKey = randomBytes(32);
+    const payload = await encryptEnvelope('secret', rawMasterKey);
+    await expect(decryptEnvelopeWithKey(payload, wrongKey)).rejects.toThrow();
+  });
+
+  it('wrappedKeyを改竄すると例外を投げる', async () => {
+    const rawMasterKey = randomBytes(32);
+    const payload = await encryptEnvelope('secret', rawMasterKey);
+    const tampered = base64ToBytes(payload.wrappedKey);
+    tampered[tampered.length - 1] ^= 0xff;
+    await expect(
+      decryptEnvelopeWithKey({ ...payload, wrappedKey: bytesToBase64(tampered) }, rawMasterKey),
+    ).rejects.toThrow();
+  });
+
+  it('ciphertextを改竄すると例外を投げる', async () => {
+    const rawMasterKey = randomBytes(32);
+    const payload = await encryptEnvelope('secret', rawMasterKey);
+    const tampered = base64ToBytes(payload.ciphertext);
+    tampered[tampered.length - 1] ^= 0xff;
+    await expect(
+      decryptEnvelopeWithKey({ ...payload, ciphertext: bytesToBase64(tampered) }, rawMasterKey),
+    ).rejects.toThrow();
+  });
+
+  it('暗号化のたびに異なるciphertextを生成する（IV再利用なし）', async () => {
+    const rawMasterKey = randomBytes(32);
+    const plaintext = 'same plaintext';
+    const p1 = await encryptEnvelope(plaintext, rawMasterKey);
+    const p2 = await encryptEnvelope(plaintext, rawMasterKey);
+    expect(p1.ciphertext).not.toBe(p2.ciphertext);
+    expect(p1.iv).not.toBe(p2.iv);
+    expect(p1.wrappedKey).not.toBe(p2.wrappedKey);
   });
 });
