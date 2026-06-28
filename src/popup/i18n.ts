@@ -30,6 +30,9 @@ export const JA: Translations = {
     bypassDesc: '制限ドメインへの単回アップロード例外を申請します。承認は管理コンソール経由です。',
     bypassArmed: '回避有効中 — 1回アップロードで消費',
     bypassRequest: 'ワンタイム回避を申請',
+    bypassDomain: '対象ドメイン',
+    bypassExpiry: (mins: number) => `残り約 ${mins} 分`,
+    bypassRevoke: '取り消す',
     networkFilter: 'Threat Intelligence Filter',
     networkFilterDesc: '脅威インテリジェンスに基づくネットワークフィルタリング',
     quickActions: {
@@ -160,6 +163,9 @@ export type Translations = {
     bypassDesc: string;
     bypassArmed: string;
     bypassRequest: string;
+    bypassDomain: string;
+    bypassExpiry: (mins: number) => string;
+    bypassRevoke: string;
     networkFilter: string;
     networkFilterDesc: string;
     quickActions: {
@@ -288,6 +294,9 @@ export const EN: Translations = {
       'Request a single-use upload exception for restricted domains. Approval is mediated by the admin console.',
     bypassArmed: 'Bypass Armed — use one upload',
     bypassRequest: 'Request One-Time Bypass',
+    bypassDomain: 'Domain',
+    bypassExpiry: (mins: number) => `~${mins} min remaining`,
+    bypassRevoke: 'Revoke',
     networkFilter: 'Threat Intelligence Filter',
     networkFilterDesc: 'Network filtering based on threat intelligence feeds',
     quickActions: {

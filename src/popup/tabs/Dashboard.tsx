@@ -196,13 +196,38 @@ export function Dashboard({
           <div className="text-zp-base font-semibold">{t.dashboard.bypassTitle}</div>
         </div>
         <div className="mt-zp-1 text-zp-md text-text-muted">{t.dashboard.bypassDesc}</div>
-        <button
-          onClick={onGrantBypass}
-          disabled={settings.oneTimeBypass !== null || isManaged}
-          className="mt-zp-3 w-full rounded-zp-lg bg-brand-hover px-zp-3 py-zp-2 text-zp-base font-semibold text-text-on-brand transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {settings.oneTimeBypass ? t.dashboard.bypassArmed : t.dashboard.bypassRequest}
-        </button>
+        {settings.oneTimeBypass && (
+          <div className="mt-zp-2 rounded-zp-lg border border-status-warn-text/30 bg-status-warn-bg/20 px-zp-2 py-zp-2 text-zp-sm space-y-zp-1">
+            <div className="flex items-center justify-between gap-zp-2">
+              <span className="text-text-muted">{t.dashboard.bypassDomain}</span>
+              <span className="font-mono text-text-primary">{settings.oneTimeBypass.domain}</span>
+            </div>
+            <div className="flex items-center justify-between gap-zp-2">
+              <span className="text-text-muted">{t.dashboard.bypassArmed}</span>
+              <span className="text-status-warn-text font-semibold">
+                {t.dashboard.bypassExpiry(Math.max(0, Math.round((settings.oneTimeBypass.expiresAt - Date.now()) / 60000)))}
+              </span>
+            </div>
+          </div>
+        )}
+        <div className="mt-zp-3 flex gap-zp-2">
+          <button
+            onClick={onGrantBypass}
+            disabled={settings.oneTimeBypass !== null || isManaged}
+            className="flex-1 rounded-zp-lg bg-brand-hover px-zp-3 py-zp-2 text-zp-base font-semibold text-text-on-brand transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {settings.oneTimeBypass ? t.dashboard.bypassArmed : t.dashboard.bypassRequest}
+          </button>
+          {settings.oneTimeBypass && (
+            <button
+              onClick={() => void onUpdateSettings({ oneTimeBypass: null })}
+              disabled={isManaged}
+              className="rounded-zp-lg border border-btn-danger-bg px-zp-3 py-zp-2 text-zp-base font-semibold text-btn-danger-bg transition hover:bg-btn-danger-bg hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {t.dashboard.bypassRevoke}
+            </button>
+          )}
+        </div>
       </Card>
     </div>
   );
