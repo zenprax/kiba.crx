@@ -29,12 +29,20 @@ export default tseslint.config(
       'react-hooks': reactHooks,
     },
     rules: {
-      // Core Hooks rules only. The React-Compiler-era rules shipped in
-      // react-hooks v7 recommended (purity, set-state-in-effect, immutability,
-      // …) flag many legitimate existing patterns and are out of scope for this
-      // refactor; adopt them in a dedicated pass.
+      // Core Hooks rules — stable across React 17-18.
       'react-hooks/rules-of-hooks': 'error',
       'react-hooks/exhaustive-deps': 'warn',
+
+      // Non-Compiler subset from react-hooks v7 (stable React 18 semantics).
+      // Verified zero violations before promoting to 'error'.
+      'react-hooks/void-use-memo': 'error',
+      'react-hooks/set-state-in-render': 'error',
+      'react-hooks/incompatible-library': 'warn',
+
+      // React-Compiler-era rules (purity, immutability, static-components, refs,
+      // globals, preserve-manual-memoization, use-memo, set-state-in-effect,
+      // error-boundaries, config, gating, unsupported-syntax) flag many legitimate
+      // React 18 patterns. Explicitly deferred until React Compiler adoption.
 
       // CLAUDE.md mandates no `any`; enforce it mechanically.
       '@typescript-eslint/no-explicit-any': 'error',

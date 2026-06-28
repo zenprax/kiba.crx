@@ -69,11 +69,6 @@ export interface KibaSettings {
    */
   filterAllowlist: string[];
   /**
-   * Tab IDs to hide from the popup navigation. Currently always empty.
-   * Reserved for future conditional display logic.
-   */
-  hiddenTabs: TabId[];
-  /**
    * Per-feature enforcement mode overrides (feature-level DRY_RUN).
    * When unspecified (or key missing for a feature), falls back to global `mode`.
    * Example: keep file in ENFORCE while only paste detection in DRY_RUN.
@@ -140,7 +135,6 @@ export const DEFAULT_SETTINGS: KibaSettings = {
   networkFilterEnabled: true,
   userBlockDomains: [],
   filterAllowlist: [],
-  hiddenTabs: [],
   // Per-feature DRY_RUN / OTA patterns / tenant rules are omitted from defaults
   // (optional fields) because they fall back to built-in behavior when unset.
   downloadGaterEnabled: false,

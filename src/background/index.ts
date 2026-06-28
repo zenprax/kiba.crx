@@ -21,7 +21,7 @@ import { initAuthHandler } from './authHandler';
 import { getCredentialCount, getCredentialFor, initCredentialBroker } from './credentialBroker';
 import { initBypassManager, requestBypass } from './bypassManager';
 import { initDownloadGater } from './downloadGater';
-import { buildDomainRules, DNR_DYNAMIC_RULE_LIMIT } from './domainRules';
+import { applyNetworkFilterState, applyDynamicDomainRules } from './domainRules';
 import { CONSOLE_CONFIG } from '../lib/consoleClient';
 
 chrome.runtime.onInstalled.addListener(async () => {
@@ -83,53 +83,7 @@ initCredentialBroker();
 initBypassManager();
 initDownloadGater();
 
-// Sync the declarativeNetRequest 'ad_rules' ruleset state with the
-// networkFilterEnabled setting on startup and on every change.
-async function applyNetworkFilterState(enabled: boolean): Promise<void> {
-  await chrome.declarativeNetRequest.updateEnabledRulesets(
-    enabled
-      ? { enableRulesetIds: ['ad_rules'], disableRulesetIds: [] }
-      : { enableRulesetIds: [], disableRulesetIds: ['ad_rules'] },
-  );
-}
-
 void getSettings().then((s) => applyNetworkFilterState(s.networkFilterEnabled));
-
-// Sync user-defined block/allowlist domains to dynamic declarativeNetRequest rules.
-async function applyDynamicDomainRules(blockDomains: string[], allowlist: string[]): Promise<void> {
-  const existing = await chrome.declarativeNetRequest.getDynamicRules();
-  const removeRuleIds = existing.map((r) => r.id);
-
-  const resourceTypes: chrome.declarativeNetRequest.ResourceType[] = [
-    chrome.declarativeNetRequest.ResourceType.MAIN_FRAME,
-    chrome.declarativeNetRequest.ResourceType.SUB_FRAME,
-    chrome.declarativeNetRequest.ResourceType.SCRIPT,
-    chrome.declarativeNetRequest.ResourceType.XMLHTTPREQUEST,
-    chrome.declarativeNetRequest.ResourceType.IMAGE,
-  ];
-
-  // Reserve slots for the allowlist first, then assign the remainder to blockDomains so the limit is not exceeded.
-  let trimmedBlock = blockDomains;
-  let trimmedAllow = allowlist;
-  const total = blockDomains.length + allowlist.length;
-  if (total > DNR_DYNAMIC_RULE_LIMIT) {
-    const allowSlots = Math.min(allowlist.length, DNR_DYNAMIC_RULE_LIMIT);
-    const blockSlots = DNR_DYNAMIC_RULE_LIMIT - allowSlots;
-    trimmedAllow = allowlist.slice(0, allowSlots);
-    trimmedBlock = blockDomains.slice(0, blockSlots);
-    console.warn(
-      `[kiba.crx] DNR rule limit: trimmed ${total - DNR_DYNAMIC_RULE_LIMIT} rules (block: ${blockDomains.length}→${trimmedBlock.length}, allow: ${allowlist.length}→${trimmedAllow.length})`,
-    );
-  }
-
-  const addRules = buildDomainRules(trimmedBlock, trimmedAllow, resourceTypes);
-
-  try {
-    await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds, addRules });
-  } catch (err) {
-    console.error('[kiba.crx] Failed to update dynamic domain rules', err);
-  }
-}
 
 void getSettings().then((s) => applyDynamicDomainRules(s.userBlockDomains, s.filterAllowlist));
 
