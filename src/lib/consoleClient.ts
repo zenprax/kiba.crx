@@ -22,17 +22,20 @@ export interface ConsoleConfig {
   bypassApprovalUrl: string | null;
   /** BYOK 鍵の参照。null のとき暗号ペイロードを要する機能は無効。 */
   keyRef: KeyRef | null;
+  /** 監査ログ転送先 URL。null のときフラッシュは no-op（ローカル保持のみ）。 */
+  telemetryUrl: string | null;
 }
 
 /**
  * 本番化の唯一の編集点。後日この定数の各 URL と keyRef を埋めるだけで、
- * ポリシー同期・SSO 資格情報・Bypass 承認のすべてがコンソール連携で稼働する。
+ * ポリシー同期・SSO 資格情報・Bypass 承認・監査ログ転送のすべてがコンソール連携で稼働する。
  */
 export const CONSOLE_CONFIG: ConsoleConfig = {
   policyUrl: null,
   credentialUrl: null,
   bypassApprovalUrl: null,
   keyRef: null,
+  telemetryUrl: null,
 };
 
 /**

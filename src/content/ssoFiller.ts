@@ -25,13 +25,27 @@ function hasLoginForm(): boolean {
   return document.querySelector('input[type="password"]') !== null;
 }
 
-/** background（credentialBroker）へこの URL 用の資格情報を 1 件問い合わせる。 */
+/**
+ * background（credentialBroker）へこの URL 用の資格情報を 1 件問い合わせる。
+ *
+ * MV3 の Service Worker がサスペンドから復帰する際に sendMessage が失敗することがある。
+ * 最大3回、指数バックオフでリトライして SW の起動完了を待つ。
+ */
 async function requestCredential(url: string): Promise<SsoCredential | null> {
-  const cred = (await chrome.runtime.sendMessage({
-    kind: 'kiba:get-credential',
-    url,
-  })) as SsoCredential | null;
-  return cred ?? null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const cred = (await chrome.runtime.sendMessage({
+        kind: 'kiba:get-credential',
+        url,
+      })) as SsoCredential | null;
+      return cred ?? null;
+    } catch {
+      if (attempt < 2) {
+        await new Promise<void>((r) => setTimeout(r, 300 * (attempt + 1)));
+      }
+    }
+  }
+  return null;
 }
 
 /**

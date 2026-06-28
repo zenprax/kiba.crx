@@ -91,6 +91,12 @@ export function fillCredentials(doc: Document, cred: SsoCredential): FillResult 
     } else {
       form.submit();
     }
+    // パスワード値をDOMから即時消去して3rd Party JSによる窃取の隙を極限まで減らす。
+    // 送信処理はすでにキューに入っているため、値クリアはフォーム送信に影響しない。
+    setTimeout(() => {
+      setNativeValue(passwordEl, '');
+      if (userEl) setNativeValue(userEl, '');
+    }, 1);
     return { filled: Boolean(userEl), submitted: true };
   }
 

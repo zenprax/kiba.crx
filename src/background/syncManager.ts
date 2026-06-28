@@ -18,7 +18,7 @@ import {
   decodeJwtPayload,
   decryptPolicyBlob,
 } from '../lib/policyFilter';
-import { addAuditLog, getSettings, setSettings } from '../lib/storage';
+import { addAuditLog, flushAuditQueue, getSettings, setSettings } from '../lib/storage';
 import type { KibaSettings, KibaSettingsPatch, PolicyClaims } from '../types';
 
 /** chrome.alarms name used to schedule periodic policy pulls. */
@@ -198,6 +198,11 @@ export function initSyncManager(): void {
   chrome.alarms.onAlarm.addListener((alarm) => {
     if (alarm.name !== SYNC_ALARM) return;
     void syncManagedPolicy();
+    // 同期サイクルに便乗して監査ログをコンソール API へ転送する。
+    // telemetryUrl 未設定時は no-op。送信失敗時もローカルは変更されないため安全。
+    if (CONSOLE_CONFIG.telemetryUrl) {
+      void flushAuditQueue(CONSOLE_CONFIG.telemetryUrl);
+    }
   });
 
   // 起動時に即時 pull する。online イベントは authHandler が担当する。

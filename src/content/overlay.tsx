@@ -78,7 +78,7 @@ export function notify(title: string, message: string): void {
 
 /** 現在マウント中のホスト要素・React ルート・Shadow Root の組。 */
 interface MountedOverlay {
-  host: HTMLElement;
+  host: HTMLDialogElement;
   shadow: ShadowRoot;
   root: Root;
 }
@@ -89,30 +89,40 @@ let active: MountedOverlay | null = null;
 export function removeOverlay(): void {
   if (!active) return;
   active.root.unmount();
+  try {
+    active.host.close();
+  } catch {
+    // already closed
+  }
   active.host.remove();
   active = null;
 }
 
 /**
- * Shadow DOM ホストを生成し、与えた React ノードをその中の専用ルートへマウントする。
+ * Shadow DOM ホストを <dialog> として生成し、showModal() で Top Layer へ昇格させる。
  *
- * <style> を Shadow Root 内に注入することで、スタイルは Shadow 境界に閉じる。
- * ホスト要素自体は最小限のスタイルのみ持ち（位置は overlay 側の CSS が担う）、
- * z-index で最前面を確保する。
+ * Top Layer はブラウザが管理する最上位レイヤーで、ホスト側の transform / filter /
+ * contain によるスタッキングコンテキスト切り替えの影響を受けない。
+ * <style> は Shadow Root 内に閉じるためホストページの CSS と完全に隔離される。
  */
 function render(node: ReactNode): void {
   removeOverlay();
 
-  const host = document.createElement('div');
-  // ホスト要素はレイアウトに影響しないオーバーレイ専用コンテナ。
-  host.style.position = 'fixed';
-  host.style.zIndex = '2147483647';
-  host.style.top = '0';
-  host.style.left = '0';
+  const host = document.createElement('dialog');
+  // <dialog> 自体の UA スタイル（border / padding / background / 最大幅制約）をリセットし、
+  // レイアウトは Shadow Root 内の OVERLAY_CSS に完全に委ねる。
+  const dialogReset = `
+    dialog { all: unset; display: block; }
+    dialog::backdrop { display: none; }
+  `;
 
   const shadow = host.attachShadow({ mode: 'open' });
 
-  // 先にデザイントークンを :host 上の CSS 変数として定義し、OVERLAY_CSS から参照する。
+  const resetEl = document.createElement('style');
+  resetEl.textContent = dialogReset;
+  shadow.appendChild(resetEl);
+
+  // デザイントークンを :host 上の CSS 変数として定義し、OVERLAY_CSS から参照する。
   const varsEl = document.createElement('style');
   varsEl.textContent = buildHostVariables();
   shadow.appendChild(varsEl);
@@ -128,7 +138,11 @@ function render(node: ReactNode): void {
   const root = createRoot(container);
   root.render(<StrictMode>{node}</StrictMode>);
 
-  const attach = () => (document.body ?? document.documentElement).appendChild(host);
+  const attach = (): void => {
+    (document.body ?? document.documentElement).appendChild(host);
+    host.showModal();
+  };
+
   if (document.body) {
     attach();
   } else {
