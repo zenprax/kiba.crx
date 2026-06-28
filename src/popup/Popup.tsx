@@ -172,10 +172,10 @@ export function Popup() {
   return (
     <LangContext.Provider value={t}>
     <Tooltip.Provider delayDuration={200}>
-    <div className="min-h-[480px] bg-bg-base text-text-primary font-sans">
+    <div className="h-[600px] flex flex-col bg-bg-base text-text-primary font-sans">
       {/* Status header */}
       <header
-        className={`header-wrap px-zp-5 pt-zp-4 border-b border-border-default relative cursor-default ${
+        className={`header-wrap shrink-0 px-zp-5 pt-zp-4 border-b border-border-default relative cursor-default ${
           dangerFlash ? 'header-alert' : settings.enabled ? '' : 'header-paused'
         }`}
       >
@@ -270,7 +270,7 @@ export function Popup() {
       </header>
 
       {/* Hero collapse toggle — sits between header and body, centered */}
-      <div className="expand-btn-wrap">
+      <div className="expand-btn-wrap shrink-0">
         <button
           onClick={() => setHeroOpen((o) => !o)}
           aria-label={heroOpen ? 'コンテンツを閉じる' : 'コンテンツを開く'}
@@ -282,9 +282,9 @@ export function Popup() {
       </div>
 
       {/* Collapsible body */}
-      <div className={`hero-body ${heroOpen ? 'hero-body-open' : 'hero-body-closed'}`}>
+      <div className={`hero-body flex-1 flex flex-col min-h-0 ${heroOpen ? 'hero-body-open' : 'hero-body-closed'}`}>
         {/* Tab navigation */}
-        <nav className="flex items-stretch border-b border-border-default bg-bg-surface/80 px-zp-2 gap-0">
+        <nav className="shrink-0 flex items-stretch border-b border-border-default bg-bg-surface/80 px-zp-2 gap-0">
           {tabs.map((tab, idx) => {
             const isActive = activeTab === tab.id;
             return (
@@ -302,7 +302,7 @@ export function Popup() {
           })}
         </nav>
 
-        <main className="p-zp-4">
+        <main className="flex-1 overflow-y-scroll p-zp-4">
           {activeTab === 'dashboard' && (
             <Dashboard
               settings={settings}
@@ -342,7 +342,7 @@ export function Popup() {
         </main>
 
         {/* Keyboard hint bar */}
-        <div className="kb-hint">
+        <div className="kb-hint shrink-0">
           <div className="kb-hint-item">
             <span className="kb-key">1</span>
             <span>–</span>

@@ -10,7 +10,6 @@ body {
 
 #root {
   width: 420px;
-  scrollbar-gutter: stable;
 }
 
 /* ------------------------------------------------------------------ *
@@ -213,17 +212,15 @@ body {
  * Hero collapse transition (Phase 2-C)
  * ------------------------------------------------------------------ */
 .hero-body {
-  overflow: hidden;
-  transition: max-height 0.28s ease, opacity 0.22s ease;
+  transition: opacity 0.22s ease;
 }
 
 .hero-body-open {
-  max-height: 600px;
   opacity: 1;
 }
 
 .hero-body-closed {
-  max-height: 0;
+  display: none;
   opacity: 0;
 }
 

@@ -281,8 +281,10 @@ function SiteSegmentCard({
                 className={`flex flex-1 items-center justify-center gap-zp-1 py-zp-2 text-zp-sm font-semibold transition
                   ${siteState === seg.id
                     ? seg.id === 'block'
-                      ? 'bg-btn-danger-bg text-text-primary'
-                      : 'bg-brand-primary text-text-on-brand'
+                      ? 'bg-interactive-segment-block-bg text-interactive-segment-block-text'
+                      : seg.id === 'allow'
+                      ? 'bg-interactive-segment-allow-bg text-interactive-segment-allow-text'
+                      : 'bg-interactive-segment-default-bg text-interactive-segment-default-text'
                     : 'text-text-muted hover:text-text-secondary hover:bg-bg-base/40'
                   }
                   disabled:cursor-not-allowed disabled:opacity-50`}
