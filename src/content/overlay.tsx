@@ -20,6 +20,7 @@ import {
 import { createRoot, type Root } from 'react-dom/client';
 import { cssVariables, getTheme } from '@zenprax/design-tokens';
 import { OVERLAY_CSS } from './overlayStyles';
+import { sendKibaMessage } from '../lib/messaging';
 
 /**
  * Shadow Root に注入する CSS カスタムプロパティを構築する。
@@ -69,7 +70,7 @@ function hexToRgba(hex: string, alpha: number): string {
 
 /** Sends a notification request to the background service worker. */
 export function notify(title: string, message: string): void {
-  chrome.runtime.sendMessage({ kind: 'kiba:notify', title, message });
+  void sendKibaMessage({ kind: 'kiba:notify', title, message });
 }
 
 /* ------------------------------------------------------------------ *
@@ -237,7 +238,7 @@ function RequestBypassModal({
       await onConfirm();
     } else {
       // 承認は background（bypassManager）に一元化。付与・audit 記録もそちらで行う。
-      await chrome.runtime.sendMessage({ kind: 'kiba:request-bypass', domain });
+      await sendKibaMessage({ kind: 'kiba:request-bypass', domain });
       notify('kiba.crx', 'One-Time Bypass granted. Re-select your file to upload.');
     }
     removeOverlay();

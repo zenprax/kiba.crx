@@ -6,14 +6,14 @@
  */
 
 import { useEffect, useState } from 'react';
+import { sendKibaMessage } from '../../lib/messaging';
+import type { CredentialStatusResponse } from '../../types';
 
-/** background から返る資格情報の同期状態（機密情報は含まない）。 */
-export interface CredentialStatus {
-  /** コンソール連携で資格情報が構成済みなら true。 */
-  configured: boolean;
-  /** メモリ常駐キャッシュの資格情報件数（password は含まない）。 */
-  count: number;
-}
+/**
+ * background から返る資格情報の同期状態（機密情報は含まない）。
+ * メッセージング契約 {@link CredentialStatusResponse} のエイリアス。
+ */
+export type CredentialStatus = CredentialStatusResponse;
 
 const EMPTY_STATUS: CredentialStatus = { configured: false, count: 0 };
 
@@ -24,11 +24,9 @@ export function useCredentialStatus(ssoEnabled: boolean): CredentialStatus {
   const [status, setStatus] = useState<CredentialStatus>(EMPTY_STATUS);
 
   useEffect(() => {
-    void chrome.runtime
-      .sendMessage({ kind: 'kiba:credential-status' })
-      .then((res: CredentialStatus | undefined) => {
-        if (res) setStatus(res);
-      });
+    void sendKibaMessage({ kind: 'kiba:credential-status' }).then((res) => {
+      if (res) setStatus(res);
+    });
   }, [ssoEnabled]);
 
   return status;

@@ -15,6 +15,7 @@ import {
 import type { KibaMode, KibaSettings, TenantWhitelistEntry } from '../../types';
 import type { TenantProvider } from '../../types';
 import type { DryRunFeature } from '../../lib/dryRun';
+import { sendKibaMessage } from '../../lib/messaging';
 import { Card } from '../Popup';
 import { useLang } from '../i18n';
 
@@ -164,7 +165,7 @@ function CloudSyncCard({ isManaged }: { isManaged: boolean }) {
       const customPolicyId = crypto.randomUUID();
       const decryptionKey = generateMockKey();
       await chrome.storage.local.set({ customPolicyId, decryptionKey });
-      await chrome.runtime.sendMessage({ kind: 'kiba:request-sync' });
+      await sendKibaMessage({ kind: 'kiba:request-sync' });
       setStatus('connected');
     };
 

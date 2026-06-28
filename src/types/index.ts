@@ -11,8 +11,9 @@
  *  - tenant:   tenant-context identification (Feature A)
  *  - sso:      pseudo-SSO autofill credentials (Feature B)
  *  - auth:     operating mode, TTL auth/standalone state, One-Time Bypass
- *  - policy:   enterprise dynamic-policy distribution (attribute targeting)
- *  - settings: top-level KibaSettings, defaults, and popup tab ids
+ *  - policy:    enterprise dynamic-policy distribution (attribute targeting)
+ *  - settings:  top-level KibaSettings, defaults, and popup tab ids
+ *  - messaging: typed runtime-messaging contract (popup/content <-> background)
  */
 
 export * from './audit';
@@ -21,3 +22,4 @@ export * from './sso';
 export * from './auth';
 export * from './policy';
 export * from './settings';
+export * from './messaging';

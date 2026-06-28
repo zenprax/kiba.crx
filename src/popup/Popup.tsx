@@ -12,6 +12,7 @@ import {
   Shield,
 } from 'lucide-react';
 import { type TabId, type TenantWhitelistEntry, type AuditEventType } from '../types';
+import { sendKibaMessage } from '../lib/messaging';
 import { useKibaSettings, useManagedPolicy, useCredentialStatus } from './hooks';
 import { Dashboard } from './tabs/Dashboard';
 import { FilterTab } from './tabs/FilterTab';
@@ -164,7 +165,7 @@ export function Popup() {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab?.url) return;
     const domain = new URL(tab.url).hostname;
-    await chrome.runtime.sendMessage({ kind: 'kiba:request-bypass', domain });
+    await sendKibaMessage({ kind: 'kiba:request-bypass', domain });
   }
 
   const isDryRun = settings.mode === 'DRY_RUN';

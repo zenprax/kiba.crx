@@ -12,6 +12,7 @@
 
 import { fillCredentials, type FillResult } from '../lib/ssoFiller';
 import { addAuditLog } from '../lib/storage';
+import { sendKibaMessage } from '../lib/messaging';
 import type { KibaSettings, SsoCredential } from '../types';
 
 /** How long to keep watching for a (possibly SPA-rendered) password field. */
@@ -31,10 +32,7 @@ function hasLoginForm(): boolean {
 async function requestCredential(url: string): Promise<SsoCredential | null> {
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      const cred = (await chrome.runtime.sendMessage({
-        kind: 'kiba:get-credential',
-        url,
-      })) as SsoCredential | null;
+      const cred = await sendKibaMessage({ kind: 'kiba:get-credential', url });
       return cred ?? null;
     } catch {
       if (attempt < 2) {

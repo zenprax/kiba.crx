@@ -8,7 +8,7 @@
  *    approval are handled here, never in content/popup.
  */
 
-import { DEFAULT_SETTINGS } from '../types';
+import { DEFAULT_SETTINGS, type KibaMessage } from '../types';
 import {
   getSettings,
   onSettingsChanged,
@@ -23,42 +23,6 @@ import { initBypassManager, requestBypass } from './bypassManager';
 import { initDownloadGater } from './downloadGater';
 import { buildDomainRules, DNR_DYNAMIC_RULE_LIMIT } from './domainRules';
 import { CONSOLE_CONFIG } from '../lib/consoleClient';
-
-/** content → background: OS 通知の依頼。 */
-interface NotifyMessage {
-  kind: 'kiba:notify';
-  title: string;
-  message: string;
-}
-
-/** content → background: この URL 用の SSO 資格情報を要求（応答: SsoCredential | null）。 */
-interface GetCredentialMessage {
-  kind: 'kiba:get-credential';
-  url: string;
-}
-
-/** content/popup → background: One-Time Bypass を要求（応答: BypassGrant | null）。 */
-interface RequestBypassMessage {
-  kind: 'kiba:request-bypass';
-  domain: string;
-}
-
-/** popup → background: 資格情報の同期状態を要求（応答: { configured, count }）。 */
-interface CredentialStatusMessage {
-  kind: 'kiba:credential-status';
-}
-
-/** popup → background: クラウド同期設定の保存後、即時にポリシー同期を要求する。 */
-interface RequestSyncMessage {
-  kind: 'kiba:request-sync';
-}
-
-type KibaMessage =
-  | NotifyMessage
-  | GetCredentialMessage
-  | RequestBypassMessage
-  | CredentialStatusMessage
-  | RequestSyncMessage;
 
 chrome.runtime.onInstalled.addListener(async () => {
   // 旧バージョンが残した平文資格情報を削除する（機密がディスクに残らないよう保証）。
