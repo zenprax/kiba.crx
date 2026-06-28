@@ -22,6 +22,7 @@ import {
   getActiveSecretPatterns,
   isDangerousPaste,
   sanitizePaste,
+  type SanitizeResult,
 } from '../lib/patterns';
 import { addAuditLog } from '../lib/storage';
 import type { KibaSettings } from '../types';
@@ -29,6 +30,47 @@ import { isRestrictedContext } from './tenant';
 import { showDangerOverlay } from './overlay';
 
 const HOSTNAME = window.location.hostname;
+
+/**
+ * クリップボードの text/html 中のテキストノードをマスクし、書式を保持したHTML文字列を返す。
+ * text/html が空または DOMParser でパース失敗の場合は null を返す。
+ */
+function sanitizeHtmlClipboard(
+  html: string,
+  patterns: { label: string; pattern: RegExp }[],
+): { html: string; result: SanitizeResult } | null {
+  if (!html) return null;
+  let doc: Document;
+  try {
+    doc = new DOMParser().parseFromString(html, 'text/html');
+  } catch {
+    return null;
+  }
+
+  const walker = document.createTreeWalker(doc.body, NodeFilter.SHOW_TEXT);
+  let anyMasked = false;
+  const allLabels: string[] = [];
+
+  let node: Node | null;
+  while ((node = walker.nextNode()) !== null) {
+    const text = node.nodeValue ?? '';
+    if (!text) continue;
+    const r = sanitizePaste(text, patterns);
+    if (r.masked) {
+      node.nodeValue = r.sanitized;
+      anyMasked = true;
+      for (const l of r.matchedLabels) {
+        if (!allLabels.includes(l)) allLabels.push(l);
+      }
+    }
+  }
+
+  if (!anyMasked) return null;
+  return {
+    html: new XMLSerializer().serializeToString(doc),
+    result: { sanitized: doc.body.textContent ?? '', masked: true, matchedLabels: allLabels },
+  };
+}
 
 /**
  * Registers the capture-phase copy handler. `getSettings` is a synchronous
@@ -70,7 +112,8 @@ export function initPasteGuard(getSettings: () => KibaSettings | null): () => vo
     const maskEnabled = settings?.maskEnabled ?? true;
     if (!maskEnabled || !isRestrictedContext(settings)) return;
 
-    const result = sanitizePaste(selectedText, getActiveSecretPatterns(settings));
+    const activePatterns = getActiveSecretPatterns(settings);
+    const result = sanitizePaste(selectedText, activePatterns);
     if (!result.masked) return;
 
     const dryRun = isDryRunFor(settings, 'tenant');
@@ -81,6 +124,13 @@ export function initPasteGuard(getSettings: () => KibaSettings | null): () => vo
     }
     event.preventDefault();
     event.stopPropagation();
+
+    // text/html が存在する場合はテキストノードのみマスクして書式を保持する。
+    const rawHtml = event.clipboardData?.getData('text/html') ?? '';
+    const htmlMasked = rawHtml ? sanitizeHtmlClipboard(rawHtml, activePatterns) : null;
+    if (htmlMasked) {
+      event.clipboardData?.setData('text/html', htmlMasked.html);
+    }
     event.clipboardData?.setData('text/plain', result.sanitized);
     void addAuditLog('paste-mask', detail, HOSTNAME);
   };
