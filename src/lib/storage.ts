@@ -60,6 +60,34 @@ export async function purgeLegacyCredentials(): Promise<void> {
 }
 
 /**
+ * ローカルの監査ログを endpoint へ POST し、送信成功分をローカルから削除する。
+ *
+ * - 送信成功時のみローカルを変更する（べき等：失敗しても次回のフラッシュで再試行）。
+ * - chunkSize 件ずつ送信して単一リクエストのペイロードサイズを制限する。
+ * - 送信成功件数を返す（0 は送信なし or 失敗）。
+ */
+export async function flushAuditQueue(endpoint: string, chunkSize = 50): Promise<number> {
+  const current = await getSettings();
+  if (current.auditLog.length === 0) return 0;
+
+  const chunk = current.auditLog.slice(0, chunkSize);
+  try {
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(chunk),
+    });
+    if (!res.ok) return 0;
+  } catch {
+    return 0;
+  }
+
+  const remaining = current.auditLog.slice(chunkSize);
+  await setSettings({ auditLog: remaining });
+  return chunk.length;
+}
+
+/**
  * Subscribes to settings changes. Returns an unsubscribe function.
  * The callback receives the freshly merged settings object.
  */
