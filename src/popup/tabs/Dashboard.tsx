@@ -15,9 +15,7 @@ import type { KibaSettings, TabId } from '../../types';
 import { Card, StatCard, TenantList, SiteSegmentCard, FeatureToggleCard } from '../components';
 import { useLang } from '../i18n';
 
-/**
- *
- */
+/** Props for the main dashboard tab. */
 export interface DashboardProps {
   settings: KibaSettings;
   loading: boolean;

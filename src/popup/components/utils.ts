@@ -16,7 +16,7 @@ export function formatRelativeTime(ts: number): string {
 }
 
 /** Short uppercase tag shown for each audit-event type in the feed/header. */
-export const EVENT_TAG: Partial<Record<AuditEventType, string>> = {
+export const EVENT_TAG: Record<AuditEventType, string> = {
   'paste-block': 'PASTE',
   'file-block': 'FILE',
   'bypass-grant': 'BYPASS',

@@ -12,20 +12,9 @@ import {
 } from 'lucide-react';
 import type { AuditEventType, AuditLogEntry } from '../../types';
 import { Card } from '../components';
+import { EVENT_TAG } from '../components/utils';
 import { useLang } from '../i18n';
 import { AuditChart } from './AuditChart';
-
-const EVENT_LABEL: Record<AuditEventType, string> = {
-  'paste-block': 'PASTE',
-  'file-block': 'FILE',
-  'bypass-grant': 'BYPASS',
-  'paste-mask': 'MASK',
-  'sso-fill': 'SSO',
-  'tenant-block': 'TENANT',
-  'extension-audit': 'EXT',
-  'download-block': 'DL',
-  'screen-share': 'SCREEN',
-};
 
 const EVENT_ICON: Record<AuditEventType, LucideIcon> = {
   'paste-block': ClipboardX,
@@ -86,7 +75,7 @@ export function AuditLog({ entries }: { entries: AuditLogEntry[] }) {
                     className={`mt-0.5 flex shrink-0 items-center gap-zp-1 rounded-zp-sm px-zp-1 py-0.5 text-zp-xs font-bold ${EVENT_COLOR[e.type]}`}
                   >
                     <Icon className="h-3 w-3" aria-hidden />
-                    {EVENT_LABEL[e.type]}
+                    {EVENT_TAG[e.type]}
                   </span>
                   <div className="min-w-0">
                     <div className="truncate text-text-primary">{e.detail}</div>

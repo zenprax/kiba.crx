@@ -6,9 +6,7 @@ import { CloudSyncCard } from './settings/CloudSyncCard';
 import { FeatureModesCard } from './settings/FeatureModesCard';
 import { TenantManagerCard } from './settings/TenantManagerCard';
 
-/**
- *
- */
+/** Props for the settings tab. */
 export interface SettingsProps {
   settings: KibaSettings;
   isManaged: boolean;
