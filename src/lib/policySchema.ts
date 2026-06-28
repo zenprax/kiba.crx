@@ -12,12 +12,7 @@
  */
 
 import { z } from 'zod';
-import type {
-  KibaAuthState,
-  KibaSettings,
-  TenantRuleDef,
-  TenantWhitelistEntry,
-} from '../types';
+import type { KibaAuthState, KibaSettings, TenantRuleDef, TenantWhitelistEntry } from '../types';
 
 /**
  * 信頼できない RegExp ソース文字列の上限（ReDoS 緩和の一次防衛）。

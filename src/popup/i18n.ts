@@ -144,7 +144,14 @@ export const JA: Translations = {
 
 export type Translations = {
   status: { protected: string; paused: string };
-  tabs: { dashboard: string; filter: string; antiClickFix: string; sso: string; audit: string; settings: string };
+  tabs: {
+    dashboard: string;
+    filter: string;
+    antiClickFix: string;
+    sso: string;
+    audit: string;
+    settings: string;
+  };
   dashboard: {
     itemsBlocked: string;
     bypass: string;
@@ -314,8 +321,7 @@ export const EN: Translations = {
     desc: 'Credentials are managed by the admin console and held only in memory by the extension background. They are never stored or shown here.',
     notConfigured: 'Console not configured. SSO autofill is inactive.',
     noCredentials: 'No credentials synced yet (online sync required).',
-    countSynced: (n: number) =>
-      `${n} shared credential${n === 1 ? '' : 's'} synced from console.`,
+    countSynced: (n: number) => `${n} shared credential${n === 1 ? '' : 's'} synced from console.`,
   },
   audit: {
     title: 'Audit Log',
@@ -405,7 +411,8 @@ export const EN: Translations = {
     noCustom: 'No custom patterns.',
   },
   managed: 'Managed by your organization',
-  managedTooltip: 'Settings are enforced by an administrator policy and are read-only on this device.',
+  managedTooltip:
+    'Settings are enforced by an administrator policy and are read-only on this device.',
 };
 
 export const LangContext = createContext<Translations>(JA);

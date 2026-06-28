@@ -54,7 +54,11 @@ describe('detectTenant', () => {
 
   it('identifies a Google account context', () => {
     const ctx = detectTenant('https://mail.google.com/u/1/');
-    expect(ctx).toEqual({ provider: 'google', tenantId: 'google.com:1', hostname: 'mail.google.com' });
+    expect(ctx).toEqual({
+      provider: 'google',
+      tenantId: 'google.com:1',
+      hostname: 'mail.google.com',
+    });
   });
 
   it('identifies a GitHub org', () => {
@@ -70,7 +74,11 @@ describe('detectTenant', () => {
 
   it('does not throw on invalid URLs', () => {
     expect(() => detectTenant('not a url')).not.toThrow();
-    expect(detectTenant('not a url')).toEqual({ provider: 'unknown', tenantId: null, hostname: '' });
+    expect(detectTenant('not a url')).toEqual({
+      provider: 'unknown',
+      tenantId: null,
+      hostname: '',
+    });
   });
 
   it('OTA ルールがマッチすれば組み込み判定より優先する', () => {
@@ -107,13 +115,19 @@ describe('isTrustedTenant', () => {
 
   it('trusts an in-house tenant on a matching provider', () => {
     expect(
-      isTrustedTenant({ provider: 'slack', tenantId: 'T0ZENPRAX', hostname: 'app.slack.com' }, whitelist),
+      isTrustedTenant(
+        { provider: 'slack', tenantId: 'T0ZENPRAX', hostname: 'app.slack.com' },
+        whitelist,
+      ),
     ).toBe(true);
   });
 
   it('restricts a foreign tenant on a known provider', () => {
     expect(
-      isTrustedTenant({ provider: 'slack', tenantId: 'T9OTHER01', hostname: 'app.slack.com' }, whitelist),
+      isTrustedTenant(
+        { provider: 'slack', tenantId: 'T9OTHER01', hostname: 'app.slack.com' },
+        whitelist,
+      ),
     ).toBe(false);
   });
 

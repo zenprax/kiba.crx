@@ -46,9 +46,7 @@ export function matchCredential(url: string, creds: SsoCredential[]): SsoCredent
  */
 export function setNativeValue(el: HTMLInputElement, value: string): void {
   const proto =
-    el instanceof HTMLTextAreaElement
-      ? HTMLTextAreaElement.prototype
-      : HTMLInputElement.prototype;
+    el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
   const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
   if (setter) {
     setter.call(el, value);
@@ -102,4 +100,3 @@ export function fillCredentials(doc: Document, cred: SsoCredential): FillResult 
 
   return { filled: Boolean(userEl), submitted: false, reason: 'no enclosing form to submit' };
 }
-

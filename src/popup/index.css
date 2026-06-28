@@ -22,21 +22,30 @@ body {
 .header-ambient {
   position: absolute;
   inset: 0;
-  background: radial-gradient(ellipse 300px 130px at 50% -30px,
-    var(--zp-status-pulse-safe) 0%, transparent 70%);
+  background: radial-gradient(
+    ellipse 300px 130px at 50% -30px,
+    var(--zp-status-pulse-safe) 0%,
+    transparent 70%
+  );
   pointer-events: none;
   transition: background 0.8s ease;
   z-index: 0;
 }
 
 .header-paused .header-ambient {
-  background: radial-gradient(ellipse 300px 130px at 50% -30px,
-    var(--zp-status-pulse-warn) 0%, transparent 70%);
+  background: radial-gradient(
+    ellipse 300px 130px at 50% -30px,
+    var(--zp-status-pulse-warn) 0%,
+    transparent 70%
+  );
 }
 
 .header-alert .header-ambient {
-  background: radial-gradient(ellipse 300px 130px at 50% -30px,
-    var(--zp-status-pulse-crit) 0%, transparent 70%);
+  background: radial-gradient(
+    ellipse 300px 130px at 50% -30px,
+    var(--zp-status-pulse-crit) 0%,
+    transparent 70%
+  );
 }
 
 /* ------------------------------------------------------------------ *
@@ -63,7 +72,9 @@ body {
   color: var(--zp-brand-primary);
   cursor: pointer;
   user-select: none;
-  transition: color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    background 0.15s;
   white-space: nowrap;
 }
 
@@ -102,7 +113,9 @@ body {
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
+  transition:
+    color 0.15s,
+    border-color 0.15s;
   position: relative;
 }
 
@@ -126,7 +139,7 @@ body {
   border: 1px solid var(--zp-border-default);
   pointer-events: none;
   z-index: 50;
-  box-shadow: var(--zp-shadow-lg, 0 4px 12px rgba(0,0,0,0.5));
+  box-shadow: var(--zp-shadow-lg, 0 4px 12px rgba(0, 0, 0, 0.5));
 }
 
 .tab-btn.tab-active {
@@ -140,9 +153,9 @@ body {
   overflow: hidden;
   opacity: 0;
   transition:
-    width 0.28s cubic-bezier(0.4,0,0.2,1),
+    width 0.28s cubic-bezier(0.4, 0, 0.2, 1),
     opacity 0.2s ease,
-    margin-left 0.28s cubic-bezier(0.4,0,0.2,1);
+    margin-left 0.28s cubic-bezier(0.4, 0, 0.2, 1);
   margin-left: 0;
 }
 
@@ -156,15 +169,33 @@ body {
  * Shield pulse animation (Phase 2-A)
  * ------------------------------------------------------------------ */
 @keyframes shield-pulse {
-  0% { transform: scale(1); opacity: 0.6; }
-  50% { transform: scale(1.55); opacity: 0; }
-  100% { transform: scale(1.55); opacity: 0; }
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.55);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.55);
+    opacity: 0;
+  }
 }
 
 @keyframes shield-pulse-2 {
-  0% { transform: scale(1); opacity: 0.35; }
-  70% { transform: scale(1.85); opacity: 0; }
-  100% { transform: scale(1.85); opacity: 0; }
+  0% {
+    transform: scale(1);
+    opacity: 0.35;
+  }
+  70% {
+    transform: scale(1.85);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1.85);
+    opacity: 0;
+  }
 }
 
 .shield-ring-1 {
@@ -185,9 +216,18 @@ body {
  * Blocked-count fly-up animation (Phase 2-D)
  * ------------------------------------------------------------------ */
 @keyframes flyup {
-  0%   { opacity: 1; transform: translateY(0); }
-  80%  { opacity: 0.7; transform: translateY(-18px); }
-  100% { opacity: 0; transform: translateY(-24px); }
+  0% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  80% {
+    opacity: 0.7;
+    transform: translateY(-18px);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-24px);
+  }
 }
 
 .flyup-chip {
@@ -200,8 +240,13 @@ body {
  * Live dot blink (Phase 2-B feed bar)
  * ------------------------------------------------------------------ */
 @keyframes live-blink {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0.2; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.2;
+  }
 }
 
 .live-dot {
@@ -245,11 +290,26 @@ body {
   flex-shrink: 0;
 }
 
-.feed-tag-paste   { background: var(--zp-severity-critical-bg);  color: var(--zp-severity-critical-text); }
-.feed-tag-sso     { background: var(--zp-status-info-bg);         color: var(--zp-status-info-text); }
-.feed-tag-bypass  { background: var(--zp-status-warn-bg);         color: var(--zp-status-warn-text); }
-.feed-tag-dl      { background: color-mix(in srgb, var(--zp-brand-primary) 14%, transparent); color: var(--zp-brand-hover); }
-.feed-tag-default { background: var(--zp-interactive-hover);      color: var(--zp-brand-primary); }
+.feed-tag-paste {
+  background: var(--zp-severity-critical-bg);
+  color: var(--zp-severity-critical-text);
+}
+.feed-tag-sso {
+  background: var(--zp-status-info-bg);
+  color: var(--zp-status-info-text);
+}
+.feed-tag-bypass {
+  background: var(--zp-status-warn-bg);
+  color: var(--zp-status-warn-text);
+}
+.feed-tag-dl {
+  background: color-mix(in srgb, var(--zp-brand-primary) 14%, transparent);
+  color: var(--zp-brand-hover);
+}
+.feed-tag-default {
+  background: var(--zp-interactive-hover);
+  color: var(--zp-brand-primary);
+}
 
 /* ------------------------------------------------------------------ *
  * Keyboard hint bar

@@ -116,10 +116,7 @@ export function detectTenant(url: string, rules?: TenantRuleDef[]): TenantContex
  *  - provider known with a tenantId: trusted iff a whitelist entry matches
  *    both provider and tenantId.
  */
-export function isTrustedTenant(
-  ctx: TenantContext,
-  whitelist: TenantWhitelistEntry[],
-): boolean {
+export function isTrustedTenant(ctx: TenantContext, whitelist: TenantWhitelistEntry[]): boolean {
   if (ctx.provider === 'unknown') return true;
   if (ctx.tenantId === null) return false;
   return whitelist.some(

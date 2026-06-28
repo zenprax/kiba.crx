@@ -13,11 +13,7 @@
 import { base64ToBytes, decryptEnvelope, type EncryptedEnvelope } from '../lib/crypto';
 import { CONSOLE_CONFIG, resolveKey } from '../lib/consoleClient';
 import { parsePolicyPayload, type PolicyPatch } from '../lib/policySchema';
-import {
-  compileActiveSettings,
-  decodeJwtPayload,
-  decryptPolicyBlob,
-} from '../lib/policyFilter';
+import { compileActiveSettings, decodeJwtPayload, decryptPolicyBlob } from '../lib/policyFilter';
 import { addAuditLog, flushAuditQueue, getSettings, setSettings } from '../lib/storage';
 import type { KibaSettings, KibaSettingsPatch, PolicyClaims } from '../types';
 
@@ -174,7 +170,11 @@ export async function syncManagedPolicy(): Promise<void> {
     await applyPolicyPatch(patch);
 
     // 監査ログに同期成功を記録する。
-    await addAuditLog('extension-audit', 'Policy successfully synced from Cloud', 'kiba-api.zenprax.com');
+    await addAuditLog(
+      'extension-audit',
+      'Policy successfully synced from Cloud',
+      'kiba-api.zenprax.com',
+    );
   } catch {
     // ネットワーク／復号／パース失敗時はローカル現状を維持する。
     return;

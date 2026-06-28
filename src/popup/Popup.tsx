@@ -22,12 +22,12 @@ import { Settings } from './tabs/Settings';
 import { type Translations, JA, EN, LangContext } from './i18n';
 
 const TAB_ICONS: Record<TabId, ReactNode> = {
-  dashboard:     <LayoutDashboard className="h-4 w-4 shrink-0" aria-hidden />,
-  filter:        <Filter className="h-4 w-4 shrink-0" aria-hidden />,
+  dashboard: <LayoutDashboard className="h-4 w-4 shrink-0" aria-hidden />,
+  filter: <Filter className="h-4 w-4 shrink-0" aria-hidden />,
   'anti-clickfix': <RefreshCw className="h-4 w-4 shrink-0" aria-hidden />,
-  sso:           <MapPin className="h-4 w-4 shrink-0" aria-hidden />,
-  audit:         <FileText className="h-4 w-4 shrink-0" aria-hidden />,
-  settings:      <SettingsIcon className="h-4 w-4 shrink-0" aria-hidden />,
+  sso: <MapPin className="h-4 w-4 shrink-0" aria-hidden />,
+  audit: <FileText className="h-4 w-4 shrink-0" aria-hidden />,
+  settings: <SettingsIcon className="h-4 w-4 shrink-0" aria-hidden />,
 };
 
 const DANGER_EVENTS: AuditEventType[] = ['paste-block', 'tenant-block', 'download-block'];
@@ -40,15 +40,15 @@ function formatRelativeTime(ts: number): string {
 }
 
 const EVENT_TAG: Partial<Record<AuditEventType, string>> = {
-  'paste-block':    'PASTE',
-  'file-block':     'FILE',
-  'bypass-grant':   'BYPASS',
-  'paste-mask':     'MASK',
-  'sso-fill':       'SSO',
-  'tenant-block':   'TENANT',
+  'paste-block': 'PASTE',
+  'file-block': 'FILE',
+  'bypass-grant': 'BYPASS',
+  'paste-mask': 'MASK',
+  'sso-fill': 'SSO',
+  'tenant-block': 'TENANT',
   'extension-audit': 'EXT',
   'download-block': 'DL',
-  'screen-share':   'SCREEN',
+  'screen-share': 'SCREEN',
 };
 
 /** Admin/User local dashboard for kiba.crx. */
@@ -77,12 +77,12 @@ export function Popup() {
 
   const tabs = useMemo<{ id: TabId; label: string }[]>(() => {
     const all: { id: TabId; label: string }[] = [
-      { id: 'dashboard',     label: t.tabs.dashboard },
-      { id: 'filter',        label: t.tabs.filter },
+      { id: 'dashboard', label: t.tabs.dashboard },
+      { id: 'filter', label: t.tabs.filter },
       { id: 'anti-clickfix', label: t.tabs.antiClickFix },
-      { id: 'sso',           label: t.tabs.sso },
-      { id: 'audit',         label: t.tabs.audit },
-      { id: 'settings',      label: t.tabs.settings },
+      { id: 'sso', label: t.tabs.sso },
+      { id: 'audit', label: t.tabs.audit },
+      { id: 'settings', label: t.tabs.settings },
     ];
     return all.filter((tab) => !settings.hiddenTabs.includes(tab.id));
   }, [settings.hiddenTabs, t]);
@@ -129,7 +129,7 @@ export function Popup() {
     }
     document.addEventListener('keydown', onKeyDown);
     return () => document.removeEventListener('keydown', onKeyDown);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tabs]);
 
   async function toggleEnabled() {
@@ -171,197 +171,200 @@ export function Popup() {
 
   return (
     <LangContext.Provider value={t}>
-    <Tooltip.Provider delayDuration={200}>
-    <div className="h-[600px] flex flex-col bg-bg-base text-text-primary font-sans">
-      {/* Status header */}
-      <header
-        className={`header-wrap shrink-0 px-zp-5 pt-zp-4 border-b border-border-default relative cursor-default ${
-          dangerFlash ? 'header-alert' : settings.enabled ? '' : 'header-paused'
-        }`}
-      >
-        {/* Ambient light layer */}
-        <div className="header-ambient" aria-hidden />
+      <Tooltip.Provider delayDuration={200}>
+        <div className="h-[600px] flex flex-col bg-bg-base text-text-primary font-sans">
+          {/* Status header */}
+          <header
+            className={`header-wrap shrink-0 px-zp-5 pt-zp-4 border-b border-border-default relative cursor-default ${
+              dangerFlash ? 'header-alert' : settings.enabled ? '' : 'header-paused'
+            }`}
+          >
+            {/* Ambient light layer */}
+            <div className="header-ambient" aria-hidden />
 
-        {/* Top row: wordmark + controls */}
-        <div className="relative z-10 flex items-start justify-between">
-          <div>
-            <div className="text-zp-sm font-bold tracking-widest text-brand-primary uppercase leading-none mb-0.5">
-              Zenprax
-            </div>
-            <h1 className="text-zp-xl font-bold leading-tight">kiba.crx</h1>
-          </div>
-
-          <div className="flex items-center gap-zp-2 pt-0.5">
-            {isDryRun && (
-              <span className="inline-flex items-center gap-zp-1 rounded-zp-full bg-status-warn-bg px-zp-2 py-zp-1 text-zp-sm font-semibold text-status-warn-text">
-                <span className="h-1.5 w-1.5 rounded-zp-full bg-status-warn-text" />
-                DRY_RUN
-              </span>
-            )}
-            <StatusPill active={settings.enabled} t={t} />
-            <Toggle
-              checked={settings.enabled}
-              disabled={loading || isManaged}
-              onChange={toggleEnabled}
-              label="Global enable"
-            />
-          </div>
-        </div>
-
-        {/* Hero status row: shield + label + live-feed + blocked-counter */}
-        <div className="relative z-10 flex items-center gap-zp-3 pt-zp-3">
-          <ShieldWrap enabled={settings.enabled} />
-
-          <div className="flex-1 min-w-0">
-            <div className={`hero-status-label text-[15px] font-bold leading-tight ${settings.enabled ? 'text-status-safe-text' : 'text-status-warn-text'}`}>
-              {settings.enabled ? 'すべての脅威をブロック中' : '保護が無効になっています'}
-            </div>
-            {latestEntry && (
-              <div className="flex items-center gap-zp-1 mt-0.5">
-                <span className={`live-dot h-[5px] w-[5px] shrink-0 rounded-full ${settings.enabled ? 'bg-status-safe-text' : 'bg-status-warn-text'}`} />
-                <span className="text-zp-xs text-text-secondary font-medium truncate">
-                  {EVENT_TAG[latestEntry.type] ?? latestEntry.type}
-                </span>
-                <span className="text-zp-xs text-text-muted shrink-0">
-                  {formatRelativeTime(latestEntry.ts)}
-                </span>
+            {/* Top row: wordmark + controls */}
+            <div className="relative z-10 flex items-start justify-between">
+              <div>
+                <div className="text-zp-sm font-bold tracking-widest text-brand-primary uppercase leading-none mb-0.5">
+                  Zenprax
+                </div>
+                <h1 className="text-zp-xl font-bold leading-tight">kiba.crx</h1>
               </div>
-            )}
-          </div>
 
-          <div className="text-right shrink-0">
-            <div className="relative" ref={flyupContainerRef}>
-              <span className="text-[28px] font-extrabold leading-none tracking-tight text-brand-hover">
-                {blockedCount}
-              </span>
-            </div>
-            <div className="text-[10px] uppercase tracking-widest text-text-muted mt-0.5">
-              ブロック件数
-            </div>
-          </div>
-        </div>
-
-        {/* Feed bar */}
-        {latestEntry && (
-          <FeedBar entry={latestEntry} />
-        )}
-
-        {isManaged && (
-          <Tooltip.Root>
-            <Tooltip.Trigger asChild>
-              <div className="relative z-10 mt-zp-2 flex cursor-default items-center gap-zp-2 rounded-zp-lg border border-border-default bg-bg-surface px-zp-3 py-zp-2 text-zp-sm font-semibold text-brand-primary">
-                <Lock className="h-3.5 w-3.5" aria-hidden />
-                {t.managed}
+              <div className="flex items-center gap-zp-2 pt-0.5">
+                {isDryRun && (
+                  <span className="inline-flex items-center gap-zp-1 rounded-zp-full bg-status-warn-bg px-zp-2 py-zp-1 text-zp-sm font-semibold text-status-warn-text">
+                    <span className="h-1.5 w-1.5 rounded-zp-full bg-status-warn-text" />
+                    DRY_RUN
+                  </span>
+                )}
+                <StatusPill active={settings.enabled} t={t} />
+                <Toggle
+                  checked={settings.enabled}
+                  disabled={loading || isManaged}
+                  onChange={toggleEnabled}
+                  label="Global enable"
+                />
               </div>
-            </Tooltip.Trigger>
-            <Tooltip.Portal>
-              <Tooltip.Content
-                side="bottom"
-                sideOffset={6}
-                className="max-w-[280px] rounded-zp-lg border border-border-default bg-bg-surface px-zp-3 py-zp-2 text-zp-sm text-text-primary shadow-shadow-lg"
-              >
-                {t.managedTooltip}
-                <Tooltip.Arrow className="fill-bg-surface" />
-              </Tooltip.Content>
-            </Tooltip.Portal>
-          </Tooltip.Root>
-        )}
+            </div>
 
-      </header>
+            {/* Hero status row: shield + label + live-feed + blocked-counter */}
+            <div className="relative z-10 flex items-center gap-zp-3 pt-zp-3">
+              <ShieldWrap enabled={settings.enabled} />
 
-      {/* Hero collapse toggle — sits between header and body, centered */}
-      <div className="expand-btn-wrap shrink-0">
-        <button
-          onClick={() => setHeroOpen((o) => !o)}
-          aria-label={heroOpen ? 'コンテンツを閉じる' : 'コンテンツを開く'}
-          className="expand-btn"
-        >
-          <span>{heroOpen ? '閉じる' : '開く'}</span>
-          <span className={`expand-chevron ${heroOpen ? 'expand-chevron-open' : ''}`}>▴</span>
-        </button>
-      </div>
+              <div className="flex-1 min-w-0">
+                <div
+                  className={`hero-status-label text-[15px] font-bold leading-tight ${settings.enabled ? 'text-status-safe-text' : 'text-status-warn-text'}`}
+                >
+                  {settings.enabled ? 'すべての脅威をブロック中' : '保護が無効になっています'}
+                </div>
+                {latestEntry && (
+                  <div className="flex items-center gap-zp-1 mt-0.5">
+                    <span
+                      className={`live-dot h-[5px] w-[5px] shrink-0 rounded-full ${settings.enabled ? 'bg-status-safe-text' : 'bg-status-warn-text'}`}
+                    />
+                    <span className="text-zp-xs text-text-secondary font-medium truncate">
+                      {EVENT_TAG[latestEntry.type] ?? latestEntry.type}
+                    </span>
+                    <span className="text-zp-xs text-text-muted shrink-0">
+                      {formatRelativeTime(latestEntry.ts)}
+                    </span>
+                  </div>
+                )}
+              </div>
 
-      {/* Collapsible body */}
-      <div className={`hero-body flex-1 flex flex-col min-h-0 ${heroOpen ? 'hero-body-open' : 'hero-body-closed'}`}>
-        {/* Tab navigation */}
-        <nav className="shrink-0 flex items-stretch border-b border-border-default bg-bg-surface/80 px-zp-2 gap-0">
-          {tabs.map((tab, idx) => {
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                aria-keyshortcuts={`${idx + 1}`}
-                data-tip={tab.label}
-                className={`tab-btn px-zp-3 ${isActive ? 'tab-active' : ''}`}
-              >
-                {TAB_ICONS[tab.id]}
-                <span className="tab-label">{tab.label}</span>
-              </button>
-            );
-          })}
-        </nav>
+              <div className="text-right shrink-0">
+                <div className="relative" ref={flyupContainerRef}>
+                  <span className="text-[28px] font-extrabold leading-none tracking-tight text-brand-hover">
+                    {blockedCount}
+                  </span>
+                </div>
+                <div className="text-[10px] uppercase tracking-widest text-text-muted mt-0.5">
+                  ブロック件数
+                </div>
+              </div>
+            </div>
 
-        <main className="flex-1 overflow-y-scroll p-zp-4">
-          {activeTab === 'dashboard' && (
-            <Dashboard
-              settings={settings}
-              loading={loading}
-              isManaged={isManaged}
-              blockedCount={blockedCount}
-              onToggleAntiClickFix={toggleAntiClickFix}
-              onToggleMask={toggleMask}
-              onToggleSso={toggleSso}
-              onToggleNetworkFilter={toggleNetworkFilter}
-              onToggleDownloadGater={toggleDownloadGater}
-              onToggleScreenShareAudit={toggleScreenShareAudit}
-              onGrantBypass={grantBypass}
-              onUpdateSettings={updateSettings}
-              onNavigate={setActiveTab}
-            />
-          )}
-          {activeTab === 'filter' && (
-            <FilterTab
-              settings={settings}
-              isManaged={isManaged}
-              onUpdateSettings={updateSettings}
-            />
-          )}
-          {activeTab === 'anti-clickfix' && <AntiClickFixTab settings={settings} />}
-          {activeTab === 'sso' && (
-            <SsoList configured={credStatus.configured} count={credStatus.count} />
-          )}
-          {activeTab === 'audit' && <AuditLog entries={settings.auditLog} />}
-          {activeTab === 'settings' && (
-            <Settings
-              settings={settings}
-              isManaged={isManaged}
-              onUpdateSettings={updateSettings}
-            />
-          )}
-        </main>
+            {/* Feed bar */}
+            {latestEntry && <FeedBar entry={latestEntry} />}
 
-        {/* Keyboard hint bar */}
-        <div className="kb-hint shrink-0">
-          <div className="kb-hint-item">
-            <span className="kb-key">1</span>
-            <span>–</span>
-            <span className="kb-key">{tabs.length}</span>
-            <span className="ml-0.5">タブ切替</span>
+            {isManaged && (
+              <Tooltip.Root>
+                <Tooltip.Trigger asChild>
+                  <div className="relative z-10 mt-zp-2 flex cursor-default items-center gap-zp-2 rounded-zp-lg border border-border-default bg-bg-surface px-zp-3 py-zp-2 text-zp-sm font-semibold text-brand-primary">
+                    <Lock className="h-3.5 w-3.5" aria-hidden />
+                    {t.managed}
+                  </div>
+                </Tooltip.Trigger>
+                <Tooltip.Portal>
+                  <Tooltip.Content
+                    side="bottom"
+                    sideOffset={6}
+                    className="max-w-[280px] rounded-zp-lg border border-border-default bg-bg-surface px-zp-3 py-zp-2 text-zp-sm text-text-primary shadow-shadow-lg"
+                  >
+                    {t.managedTooltip}
+                    <Tooltip.Arrow className="fill-bg-surface" />
+                  </Tooltip.Content>
+                </Tooltip.Portal>
+              </Tooltip.Root>
+            )}
+          </header>
+
+          {/* Hero collapse toggle — sits between header and body, centered */}
+          <div className="expand-btn-wrap shrink-0">
+            <button
+              onClick={() => setHeroOpen((o) => !o)}
+              aria-label={heroOpen ? 'コンテンツを閉じる' : 'コンテンツを開く'}
+              className="expand-btn"
+            >
+              <span>{heroOpen ? '閉じる' : '開く'}</span>
+              <span className={`expand-chevron ${heroOpen ? 'expand-chevron-open' : ''}`}>▴</span>
+            </button>
           </div>
-          <div className="kb-hint-item">
-            <span className="kb-key">E</span>
-            <span className="ml-0.5">有効/無効</span>
-          </div>
-          <div className="kb-hint-item">
-            <span className="kb-key">↑</span>
-            <span className="kb-key">↓</span>
-            <span className="ml-0.5">スクロール</span>
+
+          {/* Collapsible body */}
+          <div
+            className={`hero-body flex-1 flex flex-col min-h-0 ${heroOpen ? 'hero-body-open' : 'hero-body-closed'}`}
+          >
+            {/* Tab navigation */}
+            <nav className="shrink-0 flex items-stretch border-b border-border-default bg-bg-surface/80 px-zp-2 gap-0">
+              {tabs.map((tab, idx) => {
+                const isActive = activeTab === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveTab(tab.id)}
+                    aria-keyshortcuts={`${idx + 1}`}
+                    data-tip={tab.label}
+                    className={`tab-btn px-zp-3 ${isActive ? 'tab-active' : ''}`}
+                  >
+                    {TAB_ICONS[tab.id]}
+                    <span className="tab-label">{tab.label}</span>
+                  </button>
+                );
+              })}
+            </nav>
+
+            <main className="flex-1 overflow-y-scroll p-zp-4">
+              {activeTab === 'dashboard' && (
+                <Dashboard
+                  settings={settings}
+                  loading={loading}
+                  isManaged={isManaged}
+                  blockedCount={blockedCount}
+                  onToggleAntiClickFix={toggleAntiClickFix}
+                  onToggleMask={toggleMask}
+                  onToggleSso={toggleSso}
+                  onToggleNetworkFilter={toggleNetworkFilter}
+                  onToggleDownloadGater={toggleDownloadGater}
+                  onToggleScreenShareAudit={toggleScreenShareAudit}
+                  onGrantBypass={grantBypass}
+                  onUpdateSettings={updateSettings}
+                  onNavigate={setActiveTab}
+                />
+              )}
+              {activeTab === 'filter' && (
+                <FilterTab
+                  settings={settings}
+                  isManaged={isManaged}
+                  onUpdateSettings={updateSettings}
+                />
+              )}
+              {activeTab === 'anti-clickfix' && <AntiClickFixTab settings={settings} />}
+              {activeTab === 'sso' && (
+                <SsoList configured={credStatus.configured} count={credStatus.count} />
+              )}
+              {activeTab === 'audit' && <AuditLog entries={settings.auditLog} />}
+              {activeTab === 'settings' && (
+                <Settings
+                  settings={settings}
+                  isManaged={isManaged}
+                  onUpdateSettings={updateSettings}
+                />
+              )}
+            </main>
+
+            {/* Keyboard hint bar */}
+            <div className="kb-hint shrink-0">
+              <div className="kb-hint-item">
+                <span className="kb-key">1</span>
+                <span>–</span>
+                <span className="kb-key">{tabs.length}</span>
+                <span className="ml-0.5">タブ切替</span>
+              </div>
+              <div className="kb-hint-item">
+                <span className="kb-key">E</span>
+                <span className="ml-0.5">有効/無効</span>
+              </div>
+              <div className="kb-hint-item">
+                <span className="kb-key">↑</span>
+                <span className="kb-key">↓</span>
+                <span className="ml-0.5">スクロール</span>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
-    </Tooltip.Provider>
+      </Tooltip.Provider>
     </LangContext.Provider>
   );
 }
@@ -393,13 +396,13 @@ function ShieldWrap({ enabled }: { enabled: boolean }) {
 }
 
 const FEED_TAG_CLASS: Partial<Record<AuditEventType, string>> = {
-  'paste-block':    'feed-tag-paste',
-  'paste-mask':     'feed-tag-paste',
-  'tenant-block':   'feed-tag-paste',
-  'sso-fill':       'feed-tag-sso',
-  'bypass-grant':   'feed-tag-bypass',
+  'paste-block': 'feed-tag-paste',
+  'paste-mask': 'feed-tag-paste',
+  'tenant-block': 'feed-tag-paste',
+  'sso-fill': 'feed-tag-sso',
+  'bypass-grant': 'feed-tag-bypass',
   'download-block': 'feed-tag-dl',
-  'screen-share':   'feed-tag-dl',
+  'screen-share': 'feed-tag-dl',
 };
 
 function FeedBar({ entry }: { entry: { ts: number; type: AuditEventType; detail: string } }) {
@@ -407,9 +410,7 @@ function FeedBar({ entry }: { entry: { ts: number; type: AuditEventType; detail:
   const tagClass = FEED_TAG_CLASS[entry.type] ?? 'feed-tag-default';
   return (
     <div className="feed-bar-row relative z-10 mt-zp-2 flex items-center gap-zp-2 overflow-hidden border-t border-border-default/60 pt-zp-2 pb-zp-5">
-      <span className={`feed-bar-tag ${tagClass}`}>
-        {tag}
-      </span>
+      <span className={`feed-bar-tag ${tagClass}`}>{tag}</span>
       <span className="min-w-0 flex-1 truncate text-zp-xs text-text-secondary">{entry.detail}</span>
       <span className="shrink-0 text-zp-xs text-text-muted">{formatRelativeTime(entry.ts)}</span>
     </div>
@@ -493,7 +494,9 @@ export function TenantList({
     return (
       <div className="mt-zp-2 rounded-zp-lg border border-dashed border-border-default p-zp-3 text-center">
         <p className="text-zp-xs text-text-muted leading-relaxed">
-          テナントを追加すると、外部貼り付けの<br />マスク精度が向上します。
+          テナントを追加すると、外部貼り付けの
+          <br />
+          マスク精度が向上します。
         </p>
         {onNavigateToSettings && (
           <button

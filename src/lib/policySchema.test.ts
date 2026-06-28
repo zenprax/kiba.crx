@@ -122,7 +122,9 @@ describe('parsePolicyPayload', () => {
     // source が不正なら配列ごと破棄。
     expect(
       parsePolicyPayload({
-        tenantRules: [{ provider: 'x', hostMatch: 'h', extract: { source: 'query', regex: 'r', group: 0 } }],
+        tenantRules: [
+          { provider: 'x', hostMatch: 'h', extract: { source: 'query', regex: 'r', group: 0 } },
+        ],
       }),
     ).toEqual({});
   });

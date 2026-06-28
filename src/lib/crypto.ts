@@ -12,8 +12,7 @@
 
 /** BYOK 鍵の参照。鍵そのものは平文 storage に置かず、参照のみを保持する。 */
 export type KeyRef =
-  | { source: 'raw-base64'; value: string }
-  | { source: 'storage'; storageKey: string };
+  { source: 'raw-base64'; value: string } | { source: 'storage'; storageKey: string };
 
 /** AES-GCM 暗号文の封筒構造（コンソールが返す JSON の想定形）。 */
 export interface EncryptedEnvelope {

@@ -32,9 +32,11 @@ export function Settings({ settings, isManaged, onUpdateSettings }: SettingsProp
       {/* Theme selection */}
       <Card>
         <div className="flex items-center gap-zp-2">
-          {settings.theme === 'dark'
-            ? <Moon className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden />
-            : <Sun className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden />}
+          {settings.theme === 'dark' ? (
+            <Moon className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden />
+          ) : (
+            <Sun className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden />
+          )}
           <div className="text-zp-base font-semibold">{t.settings.themeTitle}</div>
         </div>
         <div className="mt-zp-2 flex gap-zp-2">
@@ -338,7 +340,9 @@ function TenantManagerCard({ entries, isManaged, onUpdateSettings }: TenantManag
             className="w-full rounded-zp-lg border border-input-border bg-bg-surface px-zp-2 py-zp-2 text-zp-md text-text-primary focus:border-input-focus focus:outline-none"
           >
             {PROVIDERS.map((p) => (
-              <option key={p} value={p}>{p}</option>
+              <option key={p} value={p}>
+                {p}
+              </option>
             ))}
           </select>
 
@@ -384,7 +388,9 @@ function TenantManagerCard({ entries, isManaged, onUpdateSettings }: TenantManag
             >
               <div className="min-w-0">
                 <div className="truncate text-text-primary">{entry.label}</div>
-                <div className="truncate font-mono text-zp-xs text-text-muted">{entry.tenantId}</div>
+                <div className="truncate font-mono text-zp-xs text-text-muted">
+                  {entry.tenantId}
+                </div>
               </div>
               <div className="flex shrink-0 items-center gap-zp-2">
                 <span className="rounded-zp-sm bg-brand-muted px-zp-1 py-0.5 text-zp-xs font-bold uppercase text-brand-primary">

@@ -10,10 +10,7 @@
  * 問い合わせ応答のメモリ上にのみ存在する。
  */
 
-import {
-  fillCredentials,
-  type FillResult,
-} from '../lib/ssoFiller';
+import { fillCredentials, type FillResult } from '../lib/ssoFiller';
 import { addAuditLog } from '../lib/storage';
 import type { KibaSettings, SsoCredential } from '../types';
 

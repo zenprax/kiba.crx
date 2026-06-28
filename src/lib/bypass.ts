@@ -25,10 +25,7 @@ export function isBypassValid(
 /**
  * 付与を 1 回消費した次の状態を返す。残回数が尽きた場合・失効した場合は null。
  */
-export function consumeBypass(
-  grant: BypassGrant,
-  now: number = Date.now(),
-): BypassGrant | null {
+export function consumeBypass(grant: BypassGrant, now: number = Date.now()): BypassGrant | null {
   if (grant.expiresAt <= now) return null;
   const remainingUses = grant.remainingUses - 1;
   if (remainingUses <= 0) return null;

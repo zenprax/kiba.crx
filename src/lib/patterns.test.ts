@@ -52,7 +52,9 @@ describe('describePasteThreat', () => {
   });
 
   it('falls back to a generic label', () => {
-    expect(describePasteThreat('Invoke-Expression $payload')).toBe('Blocked Invoke-Expression paste');
+    expect(describePasteThreat('Invoke-Expression $payload')).toBe(
+      'Blocked Invoke-Expression paste',
+    );
   });
 });
 

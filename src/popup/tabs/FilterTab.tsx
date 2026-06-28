@@ -79,7 +79,11 @@ function DomainListCard({
   const [input, setInput] = useState('');
 
   function handleAdd() {
-    const domain = input.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
+    const domain = input
+      .trim()
+      .toLowerCase()
+      .replace(/^https?:\/\//, '')
+      .replace(/\/$/, '');
     if (!domain || entries.includes(domain)) return;
     onUpdate([...entries, domain]);
     setInput('');

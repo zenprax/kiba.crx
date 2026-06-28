@@ -1,10 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import {
-  base64ToBytes,
-  decryptEnvelope,
-  importAesGcmKey,
-  type EncryptedEnvelope,
-} from './crypto';
+import { base64ToBytes, decryptEnvelope, importAesGcmKey, type EncryptedEnvelope } from './crypto';
 
 /** ArrayBuffer 固定のランダムバイト列を生成するヘルパー（WebCrypto 型整合のため）。 */
 function randomBytes(length: number): Uint8Array<ArrayBuffer> {
@@ -23,9 +18,7 @@ async function encrypt(
   plaintext: string,
   rawKey: Uint8Array<ArrayBuffer>,
 ): Promise<EncryptedEnvelope> {
-  const key = await crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM' }, false, [
-    'encrypt',
-  ]);
+  const key = await crypto.subtle.importKey('raw', rawKey, { name: 'AES-GCM' }, false, ['encrypt']);
   const iv = randomBytes(12);
   const ciphertext = await crypto.subtle.encrypt(
     { name: 'AES-GCM', iv },

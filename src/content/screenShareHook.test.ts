@@ -21,11 +21,7 @@ vi.mock('../lib/storage', () => ({
 const messageHandlers: Array<(e: MessageEvent<unknown>) => void> = [];
 
 /** MessageEvent ライクなオブジェクトを組み立てて全リスナへ流す。 */
-function dispatchMessage(partial: {
-  data: unknown;
-  source?: unknown;
-  origin?: string;
-}): void {
+function dispatchMessage(partial: { data: unknown; source?: unknown; origin?: string }): void {
   const event = {
     data: partial.data,
     source: 'source' in partial ? partial.source : globalThis.window,
@@ -97,8 +93,9 @@ describe('initScreenShareHook', () => {
 
   it('teardown でリスナを解除する', async () => {
     const removed: string[] = [];
-    (globalThis.window as unknown as { removeEventListener: (t: string) => void }).removeEventListener =
-      (t: string) => removed.push(t);
+    (
+      globalThis.window as unknown as { removeEventListener: (t: string) => void }
+    ).removeEventListener = (t: string) => removed.push(t);
 
     const { initScreenShareHook } = await import('./screenShareHook');
     const teardown = initScreenShareHook();

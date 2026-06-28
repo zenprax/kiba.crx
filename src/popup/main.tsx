@@ -19,9 +19,7 @@ function applyTheme(mode: 'dark' | 'light') {
   ].join('\n');
 
   themeStyleEl.textContent =
-    cssVariables(mode, ':root') +
-    `\n:root {\n${extra}\n}\n` +
-    scrollbarCss(mode);
+    cssVariables(mode, ':root') + `\n:root {\n${extra}\n}\n` + scrollbarCss(mode);
 
   document.documentElement.setAttribute('data-theme', mode);
 }

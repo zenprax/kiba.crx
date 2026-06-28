@@ -92,10 +92,7 @@ export async function flushAuditQueue(endpoint: string, chunkSize = 50): Promise
  * The callback receives the freshly merged settings object.
  */
 export function onSettingsChanged(callback: (settings: KibaSettings) => void): () => void {
-  const listener = (
-    changes: { [key: string]: chrome.storage.StorageChange },
-    areaName: string,
-  ) => {
+  const listener = (changes: { [key: string]: chrome.storage.StorageChange }, areaName: string) => {
     if (areaName !== 'local' || !(SETTINGS_KEY in changes)) return;
     const next = (changes[SETTINGS_KEY].newValue ?? {}) as Partial<KibaSettings>;
     callback({ ...DEFAULT_SETTINGS, ...next });

@@ -12,9 +12,7 @@ import { DEFAULT_SETTINGS, WHITELISTED_DOMAINS, type KibaSettings } from '../typ
 
 /** True when `host` is on the static domain whitelist (or a subdomain of one). */
 export function isWhitelistedDomain(host: string): boolean {
-  return WHITELISTED_DOMAINS.some(
-    (domain) => host === domain || host.endsWith(`.${domain}`),
-  );
+  return WHITELISTED_DOMAINS.some((domain) => host === domain || host.endsWith(`.${domain}`));
 }
 
 /**

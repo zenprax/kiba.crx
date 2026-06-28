@@ -248,8 +248,8 @@ function RequestBypassModal({
       <DraggableCard className="kiba-card kiba-card--gated" role="dialog" ariaModal>
         <h2 className="kiba-card__title">File Upload Blocked</h2>
         <p className="kiba-card__body">
-          Uploads to <strong>{domain}</strong> are restricted by policy. Request a
-          one-time exception to upload a single file.
+          Uploads to <strong>{domain}</strong> are restricted by policy. Request a one-time
+          exception to upload a single file.
         </p>
         <div className="kiba-card__actions">
           <button className="kiba-btn kiba-btn--ghost" onClick={removeOverlay}>

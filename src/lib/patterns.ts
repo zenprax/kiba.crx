@@ -73,8 +73,10 @@ export function describePasteThreat(text: string): string {
   const lower = text.toLowerCase();
   if (lower.includes('powershell') || lower.includes('pwsh')) return 'Blocked PowerShell paste';
   if (lower.includes('cmd.exe') || lower.includes('mshta')) return 'Blocked Windows command paste';
-  if (lower.includes('curl') || lower.includes('wget')) return 'Blocked curl/wget pipe-to-shell paste';
-  if (lower.includes('iex') || lower.includes('invoke-expression')) return 'Blocked Invoke-Expression paste';
+  if (lower.includes('curl') || lower.includes('wget'))
+    return 'Blocked curl/wget pipe-to-shell paste';
+  if (lower.includes('iex') || lower.includes('invoke-expression'))
+    return 'Blocked Invoke-Expression paste';
   if (lower.includes('bash') || lower.includes('/bin/')) return 'Blocked shell command paste';
   return 'Blocked dangerous OS command paste';
 }
