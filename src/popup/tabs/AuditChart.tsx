@@ -1,17 +1,18 @@
 import { getTheme } from '@zenprax/design-tokens';
 import type { AuditEventType, AuditLogEntry } from '../../types';
-import { Card } from '../Popup';
+import { Card } from '../components';
 import { useLang } from '../i18n';
 
-/** type 別の集計結果（多い順）。 */
+/** Aggregated result per type (most frequent first). */
 export interface AuditSummarySlice {
   type: AuditEventType;
   count: number;
 }
 
 /**
- * 監査ログを type 別に集計し、件数の多い順に返す純粋関数。
- * 0 件の type は含めない。テスト対象（DOM 非依存）。
+ * Pure function that aggregates the audit log by type and returns it sorted by
+ * count (most frequent first). Types with a count of 0 are excluded. Tested
+ * (DOM-independent).
  */
 export function summarizeAuditEvents(entries: AuditLogEntry[]): AuditSummarySlice[] {
   const counts = new Map<AuditEventType, number>();
@@ -23,11 +24,11 @@ export function summarizeAuditEvents(entries: AuditLogEntry[]): AuditSummarySlic
     .sort((a, b) => b.count - a.count);
 }
 
-// viz パレット（デザイントークン由来。生 HEX は書かない）でセグメントを塗る。
+// Color the segments using the viz palette (from design tokens; never write raw HEX).
 const VIZ = getTheme('dark').color.viz;
 const SLICE_COLORS = [VIZ['1'], VIZ['2'], VIZ['3'], VIZ['4'], VIZ['5'], VIZ['6']];
 
-/** ラベル表示用の type → 短縮ラベル（AuditLog と同じ語彙）。 */
+/** type -> short label for display (same vocabulary as AuditLog). */
 const TYPE_LABEL: Record<AuditEventType, string> = {
   'paste-block': 'PASTE',
   'file-block': 'FILE',
@@ -40,7 +41,7 @@ const TYPE_LABEL: Record<AuditEventType, string> = {
   'screen-share': 'SCREEN',
 };
 
-/** SVG ドーナツの 1 セグメントを表す stroke-dasharray を計算する。 */
+/** Computes the stroke-dasharray representing one segment of the SVG donut. */
 function donutSegments(slices: AuditSummarySlice[], total: number) {
   const radius = 42;
   const circumference = 2 * Math.PI * radius;
@@ -60,7 +61,7 @@ function donutSegments(slices: AuditSummarySlice[], total: number) {
   });
 }
 
-/** 監査ログのイベント内訳を SVG ドーナツ + 凡例で可視化する。 */
+/** Visualizes the audit log event breakdown with an SVG donut and a legend. */
 export function AuditChart({ entries }: { entries: AuditLogEntry[] }) {
   const t = useLang();
   const slices = summarizeAuditEvents(entries);

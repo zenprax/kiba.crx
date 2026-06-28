@@ -1,13 +1,15 @@
 /**
- * SSO 資格情報のメモリ常駐ブローカー（background 専有・唯一の信頼境界）。
+ * In-memory broker for SSO credentials (background-only; the single trust boundary).
  *
- * 仕様により実資格情報は **平文で永続化しない**。コンソールから暗号化された
- * 資格情報を取得し、background のメモリ変数にのみ保持する。content からの
- * 問い合わせ（kiba:get-credential）に応じて、URL に一致する 1 件だけを返す。
+ * Per spec, real credentials are **never persisted in plaintext**. Encrypted
+ * credentials are fetched from the console and held only in a background memory
+ * variable. In response to a query from content (kiba:get-credential), it returns
+ * exactly the one entry matching the URL.
  *
- * MV3 の service worker は数十秒で停止しメモリが揮発するため、「短命キャッシュ +
- * 遅延フェッチ」方式を採る。キャッシュが消えても次回問い合わせ時に再フェッチされ
- * 機能は継続する。chrome.storage.session も含め、資格情報は一切ディスクに書かない。
+ * Because an MV3 service worker stops within tens of seconds and its memory is
+ * volatile, this uses a "short-lived cache + lazy fetch" approach. Even if the
+ * cache is gone, it is re-fetched on the next query and the feature keeps working.
+ * Credentials are never written to disk, including chrome.storage.session.
  */
 
 import { decryptEnvelope, type EncryptedEnvelope } from '../lib/crypto';
@@ -16,14 +18,14 @@ import { isSsoUsable } from './authHandler';
 import { matchCredential } from '../lib/ssoFiller';
 import type { KibaSettings, SsoCredential } from '../types';
 
-/** メモリ常駐の資格情報キャッシュ。worker 停止で意図的に揮発する。 */
+/** In-memory credential cache. Intentionally volatile; cleared when the worker stops. */
 let credentialCache: SsoCredential[] | null = null;
-/** キャッシュの取得時刻（epoch ms）。 */
+/** Time the cache was fetched (epoch ms). */
 let cacheFetchedAt = 0;
-/** キャッシュ有効期間（5 分）。 */
+/** Cache lifetime (5 minutes). */
 const CRED_CACHE_TTL_MS = 5 * 60_000;
 
-/** unknown を SsoCredential 配列として検証する型ガード。 */
+/** Type guard validating unknown as an SsoCredential array. */
 function isCredentialArray(value: unknown): value is SsoCredential[] {
   return (
     Array.isArray(value) &&
@@ -39,7 +41,7 @@ function isCredentialArray(value: unknown): value is SsoCredential[] {
   );
 }
 
-/** コンソールから暗号化資格情報を取得・復号してメモリへ載せる。失敗時は null。 */
+/** Fetches and decrypts encrypted credentials from the console into memory. Returns null on failure. */
 async function fetchCredentials(): Promise<SsoCredential[] | null> {
   const { credentialUrl, keyRef } = CONSOLE_CONFIG;
   if (credentialUrl === null || keyRef === null) return null;
@@ -59,7 +61,7 @@ async function fetchCredentials(): Promise<SsoCredential[] | null> {
   }
 }
 
-/** キャッシュ未ヒット／TTL 切れなら再フェッチし、現在の資格情報配列を返す。 */
+/** Re-fetches on cache miss or TTL expiry, and returns the current credential array. */
 async function ensureCredentials(now: number): Promise<SsoCredential[] | null> {
   if (credentialCache && now - cacheFetchedAt < CRED_CACHE_TTL_MS) {
     return credentialCache;
@@ -73,14 +75,15 @@ async function ensureCredentials(now: number): Promise<SsoCredential[] | null> {
 }
 
 /**
- * 指定 URL に一致する資格情報を返す。オフライン／TTL 切れ／未設定時は null
- * （= autofill しない＝フェイルセーフ）。password はこの戻り値の中だけに存在する。
+ * Returns the credential matching the given URL. Returns null when offline,
+ * TTL-expired, or unconfigured (= no autofill = fail-safe). The password exists
+ * only within this return value.
  */
 export async function getCredentialFor(
   url: string,
   settings: KibaSettings,
 ): Promise<SsoCredential | null> {
-  // SSO が無効、またはオフライン／認証 TTL 切れなら一切返さない。
+  // Return nothing if SSO is disabled, or when offline / the auth TTL has expired.
   if (!settings.ssoEnabled) return null;
   if (!isSsoUsable(settings, { online: navigator.onLine })) return null;
 
@@ -89,12 +92,12 @@ export async function getCredentialFor(
   return matchCredential(url, creds);
 }
 
-/** 現在メモリに保持している資格情報の件数（popup の状態表示用。password は含めない）。 */
+/** Number of credentials currently held in memory (for popup status display; excludes passwords). */
 export function getCredentialCount(): number {
   return credentialCache?.length ?? 0;
 }
 
-/** ブローカーの初期化フック（将来のキャッシュ事前ウォーム等の置き場所）。 */
+/** Broker initialization hook (a place for future cache pre-warming, etc.). */
 export function initCredentialBroker(): void {
-  // メッセージング配線は background/index.ts の onMessage 集約側で行う。
+  // Messaging is wired up on the onMessage consolidation side in background/index.ts.
 }

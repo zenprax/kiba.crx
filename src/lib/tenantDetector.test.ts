@@ -54,7 +54,11 @@ describe('detectTenant', () => {
 
   it('identifies a Google account context', () => {
     const ctx = detectTenant('https://mail.google.com/u/1/');
-    expect(ctx).toEqual({ provider: 'google', tenantId: 'google.com:1', hostname: 'mail.google.com' });
+    expect(ctx).toEqual({
+      provider: 'google',
+      tenantId: 'google.com:1',
+      hostname: 'mail.google.com',
+    });
   });
 
   it('identifies a GitHub org', () => {
@@ -70,7 +74,11 @@ describe('detectTenant', () => {
 
   it('does not throw on invalid URLs', () => {
     expect(() => detectTenant('not a url')).not.toThrow();
-    expect(detectTenant('not a url')).toEqual({ provider: 'unknown', tenantId: null, hostname: '' });
+    expect(detectTenant('not a url')).toEqual({
+      provider: 'unknown',
+      tenantId: null,
+      hostname: '',
+    });
   });
 
   it('OTA ルールがマッチすれば組み込み判定より優先する', () => {
@@ -93,7 +101,7 @@ describe('detectTenant', () => {
         extract: { source: 'pathname' as const, regex: '/([a-z0-9]+)', group: 1 },
       },
     ];
-    // Slack URL は notion ルールにマッチしないので組み込み Slack 判定が効く。
+    // A Slack URL does not match the notion rule, so the built-in Slack detection applies.
     const ctx = detectTenant('https://app.slack.com/client/T0ZENPRAX/C1', rules);
     expect(ctx).toEqual({ provider: 'slack', tenantId: 'T0ZENPRAX', hostname: 'app.slack.com' });
   });
@@ -107,13 +115,19 @@ describe('isTrustedTenant', () => {
 
   it('trusts an in-house tenant on a matching provider', () => {
     expect(
-      isTrustedTenant({ provider: 'slack', tenantId: 'T0ZENPRAX', hostname: 'app.slack.com' }, whitelist),
+      isTrustedTenant(
+        { provider: 'slack', tenantId: 'T0ZENPRAX', hostname: 'app.slack.com' },
+        whitelist,
+      ),
     ).toBe(true);
   });
 
   it('restricts a foreign tenant on a known provider', () => {
     expect(
-      isTrustedTenant({ provider: 'slack', tenantId: 'T9OTHER01', hostname: 'app.slack.com' }, whitelist),
+      isTrustedTenant(
+        { provider: 'slack', tenantId: 'T9OTHER01', hostname: 'app.slack.com' },
+        whitelist,
+      ),
     ).toBe(false);
   });
 

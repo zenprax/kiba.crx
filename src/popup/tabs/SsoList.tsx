@@ -1,12 +1,14 @@
 import { KeyRound } from 'lucide-react';
-import { Card } from '../Popup';
+import { Card } from '../components';
 import { useLang } from '../i18n';
 
+/** Props for SsoList. */
 export interface SsoListProps {
   configured: boolean;
   count: number;
 }
 
+/** Tab displaying pseudo-SSO credential configuration status. */
 export function SsoList({ configured, count }: SsoListProps) {
   const t = useLang();
 

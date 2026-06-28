@@ -1,5 +1,5 @@
 /**
- * 属性ベースのポリシー仕分け（policyFilter）の単体テスト。
+ * Unit tests for attribute-based policy filtering (policyFilter).
  * @vitest-environment node
  */
 
@@ -12,19 +12,19 @@ import {
 } from './policyFilter';
 import type { KibaMasterPolicy, PolicyClaims } from '../types';
 
-/** ArrayBuffer 固定のランダムバイト列を生成するヘルパー（WebCrypto 型整合のため）。 */
+/** Helper that generates ArrayBuffer-backed random bytes (for WebCrypto type consistency). */
 function randomBytes(length: number): Uint8Array<ArrayBuffer> {
   return crypto.getRandomValues(new Uint8Array(new ArrayBuffer(length)));
 }
 
-/** オブジェクトを base64url の JWT セグメント文字列へ変換する。 */
+/** Converts an object into a base64url JWT segment string. */
 function toBase64Url(obj: unknown): string {
   const json = JSON.stringify(obj);
-  // ASCII 範囲の JSON を想定（btoa は Latin-1 のみ）。
+  // Assumes ASCII-range JSON (btoa is Latin-1 only).
   return btoa(json).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-/** ヘッダ.ペイロード.署名 の擬似 JWT を組み立てる（署名は検証しないのでダミー）。 */
+/** Assembles a pseudo JWT of header.payload.signature (signature is a dummy since it is not validated). */
 function makeJwt(payload: unknown): string {
   const header = toBase64Url({ alg: 'RS256', typ: 'JWT' });
   return `${header}.${toBase64Url(payload)}.ZHVtbXlzaWc`;
@@ -37,7 +37,7 @@ describe('decodeJwtPayload', () => {
   });
 
   it('base64url 文字（- と _）を含むペイロードを正しくデコードする', () => {
-    // base64 で +,/ が出やすい値を仕込む。
+    // Use a value likely to produce + and / under standard base64.
     const payload = { email: 'user+tag@ex.com', note: '??>>>>' };
     const token = makeJwt(payload);
     expect(decodeJwtPayload(token)).toEqual(payload);
@@ -144,7 +144,7 @@ describe('compileActiveSettings', () => {
   it('ローカル専有フィールド（auditLog/oneTimeBypass）はパッチに含めない', () => {
     const policy: KibaMasterPolicy = {
       version: 1,
-      // ポリシーが誤って送ってきても取り込まないことを確認。
+      // Verify these are not ingested even if the policy sends them by mistake.
       base: { auditLog: [], oneTimeBypass: null } as KibaMasterPolicy['base'],
     };
     const compiled = compileActiveSettings(policy, {}, idToken);
@@ -154,7 +154,7 @@ describe('compileActiveSettings', () => {
 });
 
 describe('decryptPolicyBlob', () => {
-  /** policy を AES-GCM で暗号化し、ArrayBuffer と IV を返すテスト用ヘルパー。 */
+  /** Test helper that encrypts a policy with AES-GCM and returns the ArrayBuffer and IV. */
   async function encryptPolicy(
     policy: KibaMasterPolicy,
     rawKey: Uint8Array<ArrayBuffer>,

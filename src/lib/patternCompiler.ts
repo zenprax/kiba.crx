@@ -1,39 +1,41 @@
 /**
- * 信頼できない RegExp ソース文字列を安全に RegExp へ実体化するゲートウェイ。
+ * Gateway that safely instantiates untrusted RegExp source strings into RegExp.
  *
- * OTA 配信されるカスタムパターン（patterns / tenantRules）は、コンソール由来で
- * あっても「信頼しない」前提で扱う。悪性／不注意な RegExp は ReDoS
- * （カタストロフィックバックトラッキング）でコンテンツスクリプトをハングさせうる。
- * JS には正規表現の実行時タイムアウトが無いため、ここでは
- *  (1) ソース長の上限、
- *  (2) ネストした量化子など既知の危険構造の静的拒否、
- *  (3) `new RegExp` の例外（無効パターン）の握りつぶし、
- * で防御する。さらに照合する側（patterns.ts）は入力テキスト長を上限カットして
- * ワーストケース実行時間を抑える。
+ * OTA-distributed custom patterns (patterns / tenantRules) are treated as
+ * untrusted even when they originate from the console. A malicious or careless
+ * RegExp can hang the content script via ReDoS (catastrophic backtracking).
+ * Since JS has no runtime timeout for regular expressions, this module defends
+ * with:
+ *  (1) an upper bound on source length,
+ *  (2) static rejection of known dangerous structures such as nested quantifiers,
+ *  (3) swallowing exceptions from `new RegExp` (invalid patterns).
+ * In addition, the matching side (patterns.ts) caps input text length to keep
+ * worst-case execution time bounded.
  *
- * DOM/Chrome 非依存。単体テスト可能（patternCompiler.test.ts）。
+ * DOM/Chrome-independent. Unit-testable (patternCompiler.test.ts).
  */
 
-/** RegExp ソース文字列の最大長。policySchema 側でも一次ゲートしているが二重防御。 */
+/** Maximum length of a RegExp source string. policySchema also gates this once; this is defense in depth. */
 export const MAX_PATTERN_SOURCE_LEN = 512;
 
 /**
- * 危険構造の簡易検出。完全な ReDoS 検出は不可能だが、実害の大きい代表的な
- * 「ネストした量化子」(`(a+)+`, `(a*)*`, `(a+)*` 等) と、量化子直後の量化子を弾く。
- * 量化子付きグループの後ろにさらに量化子が続く形を保守的に拒否する。
+ * Lightweight detection of dangerous structures. Complete ReDoS detection is
+ * impossible, but this rejects the most impactful representative cases:
+ * "nested quantifiers" (`(a+)+`, `(a*)*`, `(a+)*`, etc.) and a quantifier
+ * immediately following another quantifier. Conservatively rejects a quantified
+ * group followed by yet another quantifier.
  */
 const NESTED_QUANTIFIER = /\([^)]*[+*][^)]*\)[+*]/;
-/** `a**` `a+*` のような連続量化子。 */
+/** Adjacent quantifiers such as `a**` or `a+*`. */
 const ADJACENT_QUANTIFIER = /[+*?]\s*[+*]/;
-/** 大きな有限量化（例 `{1000,}`）も指数/多項式爆発の温床になりうるので上限。 */
+/** Large bounded quantifiers (e.g. `{1000,}`) can also fuel exponential/polynomial blowup, so cap them. */
 const LARGE_BOUNDED_QUANTIFIER = /\{\s*\d{4,}/;
 
 /**
- * 信頼できない RegExp ソースを検証し、安全と判断できれば RegExp を返す。
- * 拒否した場合は null（呼び出し側は組み込み既定にフォールバックする）。
- *
- * @param source RegExp のソース文字列（フラグは含めない）
- * @param flags  固定フラグ。配信側に任意指定させない（状態破壊や挙動改変を防ぐ）
+ * Validates an untrusted RegExp source and returns a RegExp if judged safe.
+ * Returns null when rejected (the caller falls back to the built-in defaults).
+ * @param source RegExp source string (flags not included)
+ * @param flags  Fixed flags. Not specifiable by the distributor (prevents state corruption or behavior changes)
  */
 export function compileSafePattern(source: string, flags = ''): RegExp | null {
   if (typeof source !== 'string') return null;
@@ -47,7 +49,7 @@ export function compileSafePattern(source: string, flags = ''): RegExp | null {
     return null;
   }
 
-  // eval は使わず new RegExp のみ。無効なパターンは例外 → null。
+  // No eval; only new RegExp. Invalid patterns throw -> null.
   try {
     return new RegExp(source, flags);
   } catch {

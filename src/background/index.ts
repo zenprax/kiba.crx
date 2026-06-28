@@ -8,7 +8,7 @@
  *    approval are handled here, never in content/popup.
  */
 
-import { DEFAULT_SETTINGS } from '../types';
+import { DEFAULT_SETTINGS, type KibaMessage } from '../types';
 import {
   getSettings,
   onSettingsChanged,
@@ -18,54 +18,14 @@ import {
 import { initAuditor, scanExtensions } from './auditor';
 import { initSyncManager, syncManagedPolicy } from './syncManager';
 import { initAuthHandler } from './authHandler';
-import {
-  getCredentialCount,
-  getCredentialFor,
-  initCredentialBroker,
-} from './credentialBroker';
+import { getCredentialCount, getCredentialFor, initCredentialBroker } from './credentialBroker';
 import { initBypassManager, requestBypass } from './bypassManager';
 import { initDownloadGater } from './downloadGater';
 import { buildDomainRules, DNR_DYNAMIC_RULE_LIMIT } from './domainRules';
 import { CONSOLE_CONFIG } from '../lib/consoleClient';
 
-/** content → background: OS 通知の依頼。 */
-interface NotifyMessage {
-  kind: 'kiba:notify';
-  title: string;
-  message: string;
-}
-
-/** content → background: この URL 用の SSO 資格情報を要求（応答: SsoCredential | null）。 */
-interface GetCredentialMessage {
-  kind: 'kiba:get-credential';
-  url: string;
-}
-
-/** content/popup → background: One-Time Bypass を要求（応答: BypassGrant | null）。 */
-interface RequestBypassMessage {
-  kind: 'kiba:request-bypass';
-  domain: string;
-}
-
-/** popup → background: 資格情報の同期状態を要求（応答: { configured, count }）。 */
-interface CredentialStatusMessage {
-  kind: 'kiba:credential-status';
-}
-
-/** popup → background: クラウド同期設定の保存後、即時にポリシー同期を要求する。 */
-interface RequestSyncMessage {
-  kind: 'kiba:request-sync';
-}
-
-type KibaMessage =
-  | NotifyMessage
-  | GetCredentialMessage
-  | RequestBypassMessage
-  | CredentialStatusMessage
-  | RequestSyncMessage;
-
 chrome.runtime.onInstalled.addListener(async () => {
-  // 旧バージョンが残した平文資格情報を削除する（機密がディスクに残らないよう保証）。
+  // Remove plaintext credentials left by older versions (ensure no secrets remain on disk).
   await purgeLegacyCredentials();
   // Merge defaults in without clobbering any settings from a previous install.
   const current = await getSettings();
@@ -74,47 +34,45 @@ chrome.runtime.onInstalled.addListener(async () => {
   void scanExtensions();
 });
 
-chrome.runtime.onMessage.addListener(
-  (message: KibaMessage, _sender, sendResponse) => {
-    switch (message?.kind) {
-      case 'kiba:notify':
-        chrome.notifications.create({
-          type: 'basic',
-          iconUrl: chrome.runtime.getURL('icons/icon128.png'),
-          title: message.title,
-          message: message.message,
-          priority: 1,
-        });
-        return false; // 同期・応答不要。
+chrome.runtime.onMessage.addListener((message: KibaMessage, _sender, sendResponse) => {
+  switch (message?.kind) {
+    case 'kiba:notify':
+      chrome.notifications.create({
+        type: 'basic',
+        iconUrl: chrome.runtime.getURL('icons/icon128.png'),
+        title: message.title,
+        message: message.message,
+        priority: 1,
+      });
+      return false; // Synchronous; no response needed.
 
-      case 'kiba:get-credential':
-        void getSettings().then(async (settings) => {
-          const cred = await getCredentialFor(message.url, settings);
-          sendResponse(cred);
-        });
-        return true; // 非同期応答。
+    case 'kiba:get-credential':
+      void getSettings().then(async (settings) => {
+        const cred = await getCredentialFor(message.url, settings);
+        sendResponse(cred);
+      });
+      return true; // Asynchronous response.
 
-      case 'kiba:request-bypass':
-        void requestBypass(message.domain).then((grant) => sendResponse(grant));
-        return true; // 非同期応答。
+    case 'kiba:request-bypass':
+      void requestBypass(message.domain).then((grant) => sendResponse(grant));
+      return true; // Asynchronous response.
 
-      case 'kiba:credential-status':
-        sendResponse({
-          configured: CONSOLE_CONFIG.credentialUrl !== null,
-          count: getCredentialCount(),
-        });
-        return false; // 同期応答。
+    case 'kiba:credential-status':
+      sendResponse({
+        configured: CONSOLE_CONFIG.credentialUrl !== null,
+        count: getCredentialCount(),
+      });
+      return false; // Synchronous response.
 
-      case 'kiba:request-sync':
-        // 個人用クラウド同期設定の保存直後に即時 pull する。応答は不要。
-        void syncManagedPolicy();
-        return false;
+    case 'kiba:request-sync':
+      // Pull immediately right after saving personal cloud-sync settings. No response needed.
+      void syncManagedPolicy();
+      return false;
 
-      default:
-        return false;
-    }
-  },
-);
+    default:
+      return false;
+  }
+});
 
 // Phase-2 background subsystems: extension auditing, pull-based policy sync,
 // TTL/standalone auth, credential brokering, and bypass approval.
@@ -138,10 +96,7 @@ async function applyNetworkFilterState(enabled: boolean): Promise<void> {
 void getSettings().then((s) => applyNetworkFilterState(s.networkFilterEnabled));
 
 // Sync user-defined block/allowlist domains to dynamic declarativeNetRequest rules.
-async function applyDynamicDomainRules(
-  blockDomains: string[],
-  allowlist: string[],
-): Promise<void> {
+async function applyDynamicDomainRules(blockDomains: string[], allowlist: string[]): Promise<void> {
   const existing = await chrome.declarativeNetRequest.getDynamicRules();
   const removeRuleIds = existing.map((r) => r.id);
 
@@ -153,7 +108,7 @@ async function applyDynamicDomainRules(
     chrome.declarativeNetRequest.ResourceType.IMAGE,
   ];
 
-  // allowlist を優先確保し、残り枠を blockDomains に割り当てて上限を超えないようにする。
+  // Reserve slots for the allowlist first, then assign the remainder to blockDomains so the limit is not exceeded.
   let trimmedBlock = blockDomains;
   let trimmedAllow = allowlist;
   const total = blockDomains.length + allowlist.length;
@@ -176,9 +131,7 @@ async function applyDynamicDomainRules(
   }
 }
 
-void getSettings().then((s) =>
-  applyDynamicDomainRules(s.userBlockDomains, s.filterAllowlist),
-);
+void getSettings().then((s) => applyDynamicDomainRules(s.userBlockDomains, s.filterAllowlist));
 
 onSettingsChanged((s) => {
   void applyNetworkFilterState(s.networkFilterEnabled);

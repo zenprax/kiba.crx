@@ -2,7 +2,7 @@
  * Tenant-context helpers for the content script (Feature A).
  *
  * Decides whether the current page is a *restricted context* — i.e. a foreign
- * ("他社") tenant on a known SaaS, or (for unknown providers) a host that is not
+ * (foreign) tenant on a known SaaS, or (for unknown providers) a host that is not
  * on the domain whitelist. Pure-ish: state is passed in via `settings` rather
  * than read from a module-level variable, so callers control the source.
  */
@@ -12,9 +12,7 @@ import { DEFAULT_SETTINGS, WHITELISTED_DOMAINS, type KibaSettings } from '../typ
 
 /** True when `host` is on the static domain whitelist (or a subdomain of one). */
 export function isWhitelistedDomain(host: string): boolean {
-  return WHITELISTED_DOMAINS.some(
-    (domain) => host === domain || host.endsWith(`.${domain}`),
-  );
+  return WHITELISTED_DOMAINS.some((domain) => host === domain || host.endsWith(`.${domain}`));
 }
 
 /**

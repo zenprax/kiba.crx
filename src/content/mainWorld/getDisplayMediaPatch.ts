@@ -1,29 +1,33 @@
 /**
- * Main-world hook for navigator.mediaDevices.getDisplayMedia (画面共有監査)。
+ * Main-world hook for navigator.mediaDevices.getDisplayMedia (screen-share audit).
  *
- * このスクリプトは content_scripts の `world: 'MAIN'` で注入され、ページと同一の
- * JS コンテキストで動く。そのため `navigator.mediaDevices.getDisplayMedia` を
- * 直接ラップできる（isolated world からはページの navigator を差し替えられない）。
+ * This script is injected with content_scripts `world: 'MAIN'` and runs in the
+ * same JS context as the page. That lets it wrap
+ * `navigator.mediaDevices.getDisplayMedia` directly (the isolated world cannot
+ * replace the page's navigator).
  *
- * 重要な制約・方針:
- *  - main world からは chrome.storage / chrome.runtime に直接アクセスできない。
- *    監査記録は window.postMessage で isolated world 側（screenShareHook.ts）へ
- *    委譲する。メッセージにはマーカーを付け、受信側でオリジン検証する。
- *  - 監査は best-effort。ページから読める/改変されうるので強制ブロックではない。
- *  - 元の getDisplayMedia は **必ず呼ぶ**（共有自体はブロックしない＝Web 互換性維持）。
+ * Key constraints and approach:
+ *  - The main world cannot access chrome.storage / chrome.runtime directly.
+ *    Audit recording is delegated to the isolated world (screenShareHook.ts)
+ *    via window.postMessage. Messages carry a marker, and the receiver
+ *    validates the origin.
+ *  - Auditing is best-effort. It is readable/modifiable by the page, so it is
+ *    not an enforced block.
+ *  - The original getDisplayMedia is **always called** (sharing itself is not
+ *    blocked, preserving web compatibility).
  */
 
-/** isolated world と共有する postMessage マーカー（偽メッセージ識別用）。 */
+/** postMessage marker shared with the isolated world (to identify forged messages). */
 export const SCREEN_SHARE_MARKER = 'kiba:screen-share-request';
 
 function installHook(): void {
   const md = navigator.mediaDevices;
-  // 一部環境では mediaDevices / getDisplayMedia が未定義。何もしない。
+  // In some environments mediaDevices / getDisplayMedia are undefined. Do nothing.
   if (!md || typeof md.getDisplayMedia !== 'function') return;
 
   const original = md.getDisplayMedia.bind(md);
 
-  // 二重注入を防ぐためのフラグ（同一フレームで複数回評価された場合）。
+  // Flag to prevent double injection (if evaluated multiple times in the same frame).
   const flag = '__kibaDisplayMediaHooked';
   const w = window as unknown as Record<string, unknown>;
   if (w[flag]) return;
@@ -39,9 +43,9 @@ function installHook(): void {
         window.location.origin,
       );
     } catch {
-      // postMessage 失敗は監査の取りこぼしに留め、機能は通す。
+      // A postMessage failure only means a missed audit; let the feature proceed.
     }
-    // 元の挙動を維持（ブロックしない）。
+    // Preserve the original behaviour (do not block).
     return original(...args);
   };
 }

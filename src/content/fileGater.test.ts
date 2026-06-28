@@ -6,7 +6,6 @@
  * TOCTOU window) must be blocked, even though the cached settings still hold
  * the same valid grant. Runs in a lightweight fake DOM so no jsdom dependency
  * is required.
- *
  * @vitest-environment node
  */
 

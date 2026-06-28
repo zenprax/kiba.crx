@@ -32,18 +32,20 @@ export default defineManifest({
     {
       matches: ['<all_urls>'],
       js: ['src/content/index.ts'],
-      // CSS はオーバーレイの Shadow Root 内に <style> として注入するため、
-      // ここでのグローバル CSS 宣言は不要（ホストページを汚染しない）。
+      // CSS is injected as <style> inside the overlay's Shadow Root, so no
+      // global CSS declaration here is needed (doesn't pollute host page).
       run_at: 'document_start',
       all_frames: true,
-      // about:blank / data: の動的生成フレームにも親フレームの権限を引き継いで注入する。
-      // 悪意ある ClickFix 罠が about:blank iframe 内に仕込まれた場合でもガードが働く。
+      // Inject into dynamically created about:blank / data: frames, inheriting
+      // parent-frame permissions. Ensures guard works even if a malicious
+      // ClickFix trap is embedded inside an about:blank iframe.
       match_about_blank: true,
     },
     {
-      // 画面共有監査: getDisplayMedia をフックするため main world に注入する。
-      // ページと同一コンテキストで navigator を差し替える必要があるため world:'MAIN'。
-      // 監査記録は window.postMessage 経由で isolated world（index.ts）へ委譲する。
+      // Screen-sharing audit: inject into main world to hook getDisplayMedia.
+      // Requires world:'MAIN' to replace navigator in the same context as the page.
+      // Audit records are delegated to the isolated world (index.ts) via
+      // window.postMessage.
       matches: ['<all_urls>'],
       js: ['src/content/mainWorld/getDisplayMediaPatch.ts'],
       run_at: 'document_start',
@@ -69,8 +71,8 @@ export default defineManifest({
       },
     ],
   },
-  // 模擬 ZENPRAX Cloud 認可ポータル。popup から window.open で開くため、
-  // 拡張パッケージ内の静的リソースとして全オリジンに公開する。
+  // Mock ZENPRAX Cloud authorization portal. Opened via window.open from popup,
+  // so exposed as a static resource within the extension package to all origins.
   web_accessible_resources: [
     {
       resources: ['oauth-mock.html', 'oauth-mock.js'],

@@ -52,7 +52,9 @@ describe('describePasteThreat', () => {
   });
 
   it('falls back to a generic label', () => {
-    expect(describePasteThreat('Invoke-Expression $payload')).toBe('Blocked Invoke-Expression paste');
+    expect(describePasteThreat('Invoke-Expression $payload')).toBe(
+      'Blocked Invoke-Expression paste',
+    );
   });
 });
 
@@ -121,15 +123,15 @@ describe('getActiveDangerPatterns (OTA)', () => {
     const settings = { customPatterns: { danger: ['secret-loader\\.exe'] } };
     const patterns = getActiveDangerPatterns(settings);
     expect(patterns).toHaveLength(2);
-    // 組み込みでは引っかからないがカスタムで検知される。
+    // Not caught by built-ins but detected by the custom pattern.
     expect(isDangerousPaste('run secret-loader.exe now', patterns)).toBe(true);
-    expect(isDangerousPaste('run secret-loader.exe now')).toBe(false); // 既定のみ
+    expect(isDangerousPaste('run secret-loader.exe now')).toBe(false); // defaults only
   });
 
   it('ReDoS など危険なカスタムパターンは黙って無視する', () => {
     const settings = { customPatterns: { danger: ['(a+)+', 'valid-pat'] } };
     const patterns = getActiveDangerPatterns(settings);
-    // (a+)+ は弾かれ valid-pat だけ追加 → 組み込み + 1。
+    // (a+)+ is rejected and only valid-pat is added -> built-in + 1.
     expect(patterns).toHaveLength(2);
   });
 });

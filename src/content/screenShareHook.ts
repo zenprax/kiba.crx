@@ -1,16 +1,17 @@
 /**
- * 画面共有監査の isolated-world オーケストレータ。
+ * Isolated-world orchestrator for screen-share auditing.
  *
- * main world（getDisplayMediaPatch.ts）が getDisplayMedia 呼び出しを検知して
- * window.postMessage で通知してくる。本モジュールはそれを受け、マーカーと
- * オリジンを検証してから addAuditLog('screen-share', ...) を記録する。
+ * The main world (getDisplayMediaPatch.ts) detects getDisplayMedia calls and
+ * notifies via window.postMessage. This module receives that, validates the
+ * marker and origin, then records addAuditLog('screen-share', ...).
  *
- * セキュリティ: ページは任意の postMessage を投げられるため、
- *  - event.source === window（同一ウィンドウからのメッセージのみ）
+ * Security: because the page can post arbitrary postMessages, an entry is
+ * recorded only when all of the following hold:
+ *  - event.source === window (messages from the same window only)
  *  - event.origin === window.location.origin
  *  - data.marker === SCREEN_SHARE_MARKER
- * を全て満たす場合のみ記録する。これによりページが偽メッセージで監査ログを
- * 汚染するのを防ぐ。取得する情報は最小化（href のみ・ストリーム内容には触れない）。
+ * This prevents the page from polluting the audit log with forged messages.
+ * The captured information is minimized (href only; stream contents untouched).
  */
 
 import { addAuditLog } from '../lib/storage';
@@ -32,12 +33,12 @@ function isScreenShareMessage(data: unknown): data is ScreenShareMessage {
 }
 
 /**
- * postMessage リスナを登録する。返り値は teardown（リスナ解除）。
- * content オーケストレータの teardown 契約に合わせる。
+ * Registers the postMessage listener. Returns a teardown (listener removal),
+ * matching the content orchestrator's teardown contract.
  */
 export function initScreenShareHook(): () => void {
   const handler = (event: MessageEvent<unknown>): void => {
-    // 同一ウィンドウ・同一オリジンからのメッセージのみ信頼する。
+    // Trust only messages from the same window and same origin.
     if (event.source !== window) return;
     if (event.origin !== window.location.origin) return;
     if (!isScreenShareMessage(event.data)) return;

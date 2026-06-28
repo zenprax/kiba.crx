@@ -90,11 +90,7 @@ export function initFileGater(getSettings: () => KibaSettings | null): () => voi
     const dryRun = isDryRunFor(settings, 'file');
     if (dryRun) {
       // Simulated gate: log only, let the drop proceed.
-      void addAuditLog(
-        'file-block',
-        tagDetail(`Blocked file drop on ${HOSTNAME}`, true),
-        HOSTNAME,
-      );
+      void addAuditLog('file-block', tagDetail(`Blocked file drop on ${HOSTNAME}`, true), HOSTNAME);
       return;
     }
 

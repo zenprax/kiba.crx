@@ -3,7 +3,7 @@
  *
  * Rather than blocking whole domains, kiba.crx identifies *which tenant/account*
  * within a SaaS the user is currently in, and gates data egress (upload/paste)
- * when that tenant is not on the in-house ("自社公式") whitelist.
+ * when that tenant is not on the in-house (official company) whitelist.
  *
  * This module is intentionally free of DOM/Chrome dependencies (it only parses
  * a URL string) so it can be unit-tested in isolation (see tenantDetector.test.ts).
@@ -69,9 +69,10 @@ export function extractGithubOrg(pathname: string): string | null {
  * Identifies the tenant context for a URL string. Never throws: invalid input
  * yields `{ provider: 'unknown', tenantId: null, hostname: '' }`.
  *
- * `rules`（OTA 配信のテナント抽出ルール）が渡された場合は先にそれを評価し、
- * いずれかにマッチ（provider !== 'unknown'）すればその結果を返す。マッチしない
- * 場合は従来の組み込み Slack/Google/GitHub 判定にフォールバックする（後方互換）。
+ * When `rules` (OTA-distributed tenant-extraction rules) are passed, they are
+ * evaluated first, and if any matches (provider !== 'unknown') that result is
+ * returned. When none match, it falls back to the existing built-in
+ * Slack/Google/GitHub detection (backward compatible).
  */
 export function detectTenant(url: string, rules?: TenantRuleDef[]): TenantContext {
   if (rules && rules.length > 0) {
@@ -116,10 +117,7 @@ export function detectTenant(url: string, rules?: TenantRuleDef[]): TenantContex
  *  - provider known with a tenantId: trusted iff a whitelist entry matches
  *    both provider and tenantId.
  */
-export function isTrustedTenant(
-  ctx: TenantContext,
-  whitelist: TenantWhitelistEntry[],
-): boolean {
+export function isTrustedTenant(ctx: TenantContext, whitelist: TenantWhitelistEntry[]): boolean {
   if (ctx.provider === 'unknown') return true;
   if (ctx.tenantId === null) return false;
   return whitelist.some(

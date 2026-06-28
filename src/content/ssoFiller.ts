@@ -5,16 +5,15 @@
  * being inspected via DevTools, injects the shared-account credentials into the
  * login form (optionally auto-submitting to minimise DOM exposure time).
  *
- * 資格情報は content では保持せず、必要時に background（credentialBroker）へ
- * 問い合わせて 1 件だけ受け取る。password は storage に永続化されず、この
- * 問い合わせ応答のメモリ上にのみ存在する。
+ * Credentials are not retained in the content script; when needed, it queries
+ * the background (credentialBroker) and receives exactly one. The password is
+ * never persisted to storage and exists only in memory within this query
+ * response.
  */
 
-import {
-  fillCredentials,
-  type FillResult,
-} from '../lib/ssoFiller';
+import { fillCredentials, type FillResult } from '../lib/ssoFiller';
 import { addAuditLog } from '../lib/storage';
+import { sendKibaMessage } from '../lib/messaging';
 import type { KibaSettings, SsoCredential } from '../types';
 
 /** How long to keep watching for a (possibly SPA-rendered) password field. */
@@ -26,18 +25,16 @@ function hasLoginForm(): boolean {
 }
 
 /**
- * background（credentialBroker）へこの URL 用の資格情報を 1 件問い合わせる。
+ * Queries the background (credentialBroker) for one credential for this URL.
  *
- * MV3 の Service Worker がサスペンドから復帰する際に sendMessage が失敗することがある。
- * 最大3回、指数バックオフでリトライして SW の起動完了を待つ。
+ * sendMessage can fail while the MV3 service worker is waking from suspension.
+ * Retries up to 3 times with exponential backoff to wait for the SW to finish
+ * starting up.
  */
 async function requestCredential(url: string): Promise<SsoCredential | null> {
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
-      const cred = (await chrome.runtime.sendMessage({
-        kind: 'kiba:get-credential',
-        url,
-      })) as SsoCredential | null;
+      const cred = await sendKibaMessage({ kind: 'kiba:get-credential', url });
       return cred ?? null;
     } catch {
       if (attempt < 2) {
@@ -51,7 +48,7 @@ async function requestCredential(url: string): Promise<SsoCredential | null> {
 /**
  * Initialises the SSO handler. Reads live settings via `getSettings` so it
  * always honours the latest toggle state. Safe to call once at content-script
- * startup. 資格情報そのものは background から取得する。
+ * startup. The credentials themselves are fetched from the background.
  */
 export async function initSsoHandler(getSettings: () => KibaSettings | null): Promise<void> {
   const settings = getSettings();

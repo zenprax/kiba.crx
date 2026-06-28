@@ -1,13 +1,15 @@
 /**
  * Overlay / modal UI utilities (injected DOM) for the content script.
  *
- * オーバーレイ/モーダルは React コンポーネントとして **Shadow DOM** 内の専用
- * ルート（createRoot）へマウントする。これによりホストページの CSS は Shadow
- * 境界で完全に遮断され、こちらのスタイルもホストページへ一切漏れない（旧来の
- * manifest 経由 <link> 注入＝グローバル汚染を廃止）。
+ * The overlay/modal is mounted as React components into a dedicated root
+ * (createRoot) inside the **Shadow DOM**. This fully blocks the host page's CSS
+ * at the shadow boundary, and these styles never leak to the host page either
+ * (replacing the legacy manifest-based <link> injection, which caused global
+ * pollution).
  *
- * 公開 API（notify / showDangerOverlay / showRequestBypassModal / removeOverlay）の
- * シグネチャは従来どおりで、呼び出し側（pasteGuard / fileGater）は無改修。
+ * The public API signatures (notify / showDangerOverlay / showRequestBypassModal
+ * / removeOverlay) are unchanged, so the callers (pasteGuard / fileGater)
+ * require no modification.
  */
 
 import {
@@ -20,18 +22,20 @@ import {
 import { createRoot, type Root } from 'react-dom/client';
 import { cssVariables, getTheme } from '@zenprax/design-tokens';
 import { OVERLAY_CSS } from './overlayStyles';
+import { sendKibaMessage } from '../lib/messaging';
 
 /**
- * Shadow Root に注入する CSS カスタムプロパティを構築する。
+ * Builds the CSS custom properties to inject into the Shadow Root.
  *
- * 色トークンは `cssVariables('dark', ':host')` がそのまま `--zp-*` を生成する。
- * 影・余白・角丸・フォントサイズは色変数に含まれないため、`getTheme('dark')` の
- * Primitive/Semantic 値を overlay 用の `--zp-*` 変数として追記する。これにより
- * overlayStyles.ts 側に生の色・サイズ値を一切持たせず、すべてトークン由来にする。
+ * For color tokens, `cssVariables('dark', ':host')` emits the `--zp-*` variables
+ * directly. Shadows, spacing, radii, and font sizes are not included in the
+ * color variables, so the Primitive/Semantic values from `getTheme('dark')` are
+ * appended as overlay `--zp-*` variables. This keeps overlayStyles.ts free of
+ * any raw color/size values, with everything derived from tokens.
  */
 function buildHostVariables(): string {
   const theme = getTheme('dark');
-  // 暗幕（scrim）はベース背景を半透明にしたもの。生 rgba を書かず base 色から合成する。
+  // The scrim is the base background made translucent. Composed from the base color instead of writing raw rgba.
   const scrim = hexToRgba(theme.color.bg.base, 0.55);
 
   const extra = [
@@ -58,7 +62,7 @@ function buildHostVariables(): string {
   return `${cssVariables('dark', ':host')}\n:host {\n  ${extra}\n}`;
 }
 
-/** `#RRGGBB` を指定アルファの rgba() 文字列へ変換する（生 rgba の直書きを避けるため）。 */
+/** Converts `#RRGGBB` to an rgba() string with the given alpha (to avoid writing raw rgba directly). */
 function hexToRgba(hex: string, alpha: number): string {
   const v = hex.replace('#', '');
   const r = parseInt(v.slice(0, 2), 16);
@@ -69,14 +73,14 @@ function hexToRgba(hex: string, alpha: number): string {
 
 /** Sends a notification request to the background service worker. */
 export function notify(title: string, message: string): void {
-  chrome.runtime.sendMessage({ kind: 'kiba:notify', title, message });
+  void sendKibaMessage({ kind: 'kiba:notify', title, message });
 }
 
 /* ------------------------------------------------------------------ *
- * Shadow DOM ホスト + React ルートの単一管理
+ * Single management of the Shadow DOM host + React root
  * ------------------------------------------------------------------ */
 
-/** 現在マウント中のホスト要素・React ルート・Shadow Root の組。 */
+/** The currently mounted host element, React root, and Shadow Root tuple. */
 interface MountedOverlay {
   host: HTMLElement;
   shadow: ShadowRoot;
@@ -94,23 +98,25 @@ export function removeOverlay(): void {
 }
 
 /**
- * Shadow DOM ホストを <dialog> として生成し、showModal() で Top Layer へ昇格させる。
+ * Creates the Shadow DOM host as a <dialog> and promotes it to the Top Layer
+ * via showModal().
  *
- * Top Layer はブラウザが管理する最上位レイヤーで、ホスト側の transform / filter /
- * contain によるスタッキングコンテキスト切り替えの影響を受けない。
- * <style> は Shadow Root 内に閉じるためホストページの CSS と完全に隔離される。
+ * The Top Layer is the browser-managed topmost layer, unaffected by stacking
+ * context switches caused by the host's transform / filter / contain. The
+ * <style> is scoped within the Shadow Root, so it is fully isolated from the
+ * host page's CSS.
  */
 function render(node: ReactNode): void {
   removeOverlay();
 
   const host = document.createElement('div');
-  // ホスト要素はレイアウトに影響しないオーバーレイ専用コンテナ。
-  // all:initial でホストページの継承スタイルをリセットし、固定位置・最大 z-index で最前面を確保する。
+  // The host element is an overlay-only container that does not affect layout.
+  // all:initial resets inherited styles from the host page; fixed position and max z-index keep it on top.
   host.style.cssText = 'all:initial;position:fixed;inset:0;z-index:2147483647';
 
   const shadow = host.attachShadow({ mode: 'open' });
 
-  // デザイントークンを :host 上の CSS 変数として定義し、OVERLAY_CSS から参照する。
+  // Define design tokens as CSS variables on :host, referenced by OVERLAY_CSS.
   const varsEl = document.createElement('style');
   varsEl.textContent = buildHostVariables();
   shadow.appendChild(varsEl);
@@ -119,7 +125,7 @@ function render(node: ReactNode): void {
   styleEl.textContent = OVERLAY_CSS;
   shadow.appendChild(styleEl);
 
-  // React ルートのマウント先（Shadow Root 内のコンテナ）。
+  // Mount target for the React root (a container inside the Shadow Root).
   const container = document.createElement('div');
   shadow.appendChild(container);
 
@@ -141,12 +147,13 @@ function render(node: ReactNode): void {
 }
 
 /* ------------------------------------------------------------------ *
- * React コンポーネント（JSX が自動エスケープするため escapeHtml 不要）
+ * React components (JSX auto-escapes, so escapeHtml is not needed)
  * ------------------------------------------------------------------ */
 
 /**
  * Non-blocking warning toast shown when a dangerous paste is blocked.
- * 暗幕なしの右下トースト表示にして、裏のページ情報を確認しながら操作できる。
+ * Displayed as a bottom-right toast with no scrim, so the page behind stays
+ * visible and usable.
  */
 function DangerOverlay({ title, body }: { title: string; body: string }) {
   return (
@@ -166,8 +173,9 @@ function DangerOverlay({ title, body }: { title: string; body: string }) {
 }
 
 /**
- * ドラッグで移動できるカードラッパ。ヘッダ（kiba-card__drag）を pointerdown して
- * 動かすと transform で位置を更新する。依存追加なし（React の pointer events のみ）。
+ * A draggable card wrapper. Pointerdown on the header (kiba-card__drag) and
+ * move to update the position via transform. No added dependencies (React
+ * pointer events only).
  */
 function DraggableCard({
   className,
@@ -236,8 +244,8 @@ function RequestBypassModal({
     if (onConfirm) {
       await onConfirm();
     } else {
-      // 承認は background（bypassManager）に一元化。付与・audit 記録もそちらで行う。
-      await chrome.runtime.sendMessage({ kind: 'kiba:request-bypass', domain });
+      // Approval is centralized in the background (bypassManager); granting and audit recording happen there too.
+      await sendKibaMessage({ kind: 'kiba:request-bypass', domain });
       notify('kiba.crx', 'One-Time Bypass granted. Re-select your file to upload.');
     }
     removeOverlay();
@@ -248,8 +256,8 @@ function RequestBypassModal({
       <DraggableCard className="kiba-card kiba-card--gated" role="dialog" ariaModal>
         <h2 className="kiba-card__title">File Upload Blocked</h2>
         <p className="kiba-card__body">
-          Uploads to <strong>{domain}</strong> are restricted by policy. Request a
-          one-time exception to upload a single file.
+          Uploads to <strong>{domain}</strong> are restricted by policy. Request a one-time
+          exception to upload a single file.
         </p>
         <div className="kiba-card__actions">
           <button className="kiba-btn kiba-btn--ghost" onClick={removeOverlay}>
@@ -265,7 +273,7 @@ function RequestBypassModal({
 }
 
 /* ------------------------------------------------------------------ *
- * 公開 API（シグネチャは旧 overlay.ts と同一）
+ * Public API (signatures identical to the old overlay.ts)
  * ------------------------------------------------------------------ */
 
 /** Non-blocking warning overlay shown when a dangerous paste is blocked. */
@@ -280,11 +288,12 @@ export function showDangerOverlay(title: string, body: string): void {
 }
 
 /**
- * One-Time Bypass を要求するモーダル。
+ * Modal that requests a One-Time Bypass.
  *
- * `onConfirm` が渡された場合はそれを実行する。省略時は background の承認経路
- * （bypassManager）へ要求メッセージを送る。承認・付与・audit 記録はすべて
- * background が一元的に行うため、ここでは storage を直接書き換えない。
+ * Runs `onConfirm` when provided. When omitted, sends a request message to the
+ * background's approval path (bypassManager). Since approval, granting, and
+ * audit recording are all handled centrally by the background, storage is not
+ * written directly here.
  */
 export function showRequestBypassModal(
   domain: string,

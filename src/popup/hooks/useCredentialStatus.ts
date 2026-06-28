@@ -1,34 +1,34 @@
 /**
- * 擬似 SSO 資格情報の同期状態を background（credentialBroker）へ問い合わせるフック。
+ * Hook that queries the background (credentialBroker) for the sync status of
+ * pseudo-SSO credentials.
  *
- * セキュリティ要件: 資格情報そのものは popup に渡さない。構成有無（configured）と
- * 件数（count）のみを取得する。ssoEnabled が変化したタイミングで再問い合わせする。
+ * Security requirement: the credentials themselves are never passed to the popup.
+ * Only whether they are configured (configured) and the count (count) are
+ * retrieved. It re-queries whenever ssoEnabled changes.
  */
 
 import { useEffect, useState } from 'react';
+import { sendKibaMessage } from '../../lib/messaging';
+import type { CredentialStatusResponse } from '../../types';
 
-/** background から返る資格情報の同期状態（機密情報は含まない）。 */
-export interface CredentialStatus {
-  /** コンソール連携で資格情報が構成済みなら true。 */
-  configured: boolean;
-  /** メモリ常駐キャッシュの資格情報件数（password は含まない）。 */
-  count: number;
-}
+/**
+ * The credential sync status returned by the background (contains no secrets).
+ * Alias for the messaging contract {@link CredentialStatusResponse}.
+ */
+export type CredentialStatus = CredentialStatusResponse;
 
 const EMPTY_STATUS: CredentialStatus = { configured: false, count: 0 };
 
 /**
- * 資格情報の同期状態を返すフック。ssoEnabled に依存して再問い合わせする。
+ * Hook that returns the credential sync status. Re-queries based on ssoEnabled.
  */
 export function useCredentialStatus(ssoEnabled: boolean): CredentialStatus {
   const [status, setStatus] = useState<CredentialStatus>(EMPTY_STATUS);
 
   useEffect(() => {
-    void chrome.runtime
-      .sendMessage({ kind: 'kiba:credential-status' })
-      .then((res: CredentialStatus | undefined) => {
-        if (res) setStatus(res);
-      });
+    void sendKibaMessage({ kind: 'kiba:credential-status' }).then((res) => {
+      if (res) setStatus(res);
+    });
   }, [ssoEnabled]);
 
   return status;

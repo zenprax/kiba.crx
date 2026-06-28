@@ -1,15 +1,17 @@
 import { useState } from 'react';
 import { Shield, ShieldOff, Plus, X, Lock } from 'lucide-react';
 import type { KibaSettings } from '../../types';
-import { Card } from '../Popup';
+import { Card } from '../components';
 import { useLang } from '../i18n';
 
+/** Props for FilterTab. */
 export interface FilterTabProps {
   settings: KibaSettings;
   isManaged: boolean;
   onUpdateSettings: (patch: Partial<KibaSettings>) => Promise<void>;
 }
 
+/** Tab for managing network-filter block/allow lists. */
 export function FilterTab({ settings, isManaged, onUpdateSettings }: FilterTabProps) {
   const t = useLang();
 
@@ -79,7 +81,11 @@ function DomainListCard({
   const [input, setInput] = useState('');
 
   function handleAdd() {
-    const domain = input.trim().toLowerCase().replace(/^https?:\/\//, '').replace(/\/$/, '');
+    const domain = input
+      .trim()
+      .toLowerCase()
+      .replace(/^https?:\/\//, '')
+      .replace(/\/$/, '');
     if (!domain || entries.includes(domain)) return;
     onUpdate([...entries, domain]);
     setInput('');

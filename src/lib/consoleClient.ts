@@ -1,34 +1,37 @@
 /**
- * コンソール（admin console）接続の唯一の差し込み口。
+ * The single integration point for the (admin) console connection.
  *
- * ポリシー同期・SSO 資格情報取得・One-Time Bypass 承認の 3 機能はすべて、
- * バックエンドのコンソール API を起点に動作する。本番化に必要な「エンドポイント
- * URL と BYOK 鍵」をこの 1 ファイルに集約し、後日 `CONSOLE_CONFIG` を埋めるだけで
- * 全機能が稼働する状態にしている。
+ * All three features - policy sync, SSO credential retrieval, and One-Time
+ * Bypass approval - operate off the backend console API. The "endpoint URLs and
+ * BYOK key" needed for productionization are consolidated in this one file, so
+ * that all features become operational simply by filling in `CONSOLE_CONFIG`
+ * later.
  *
- * コンソール API は後日公開予定のため、現状はすべて null。null の各機能は
- * 安全側（同期 no-op／autofill 無効／ローカル即時承認）にフォールバックする。
+ * Since the console API is to be published later, everything is currently null.
+ * Each null feature falls back to the safe side (sync no-op / autofill disabled
+ * / immediate local approval).
  */
 
 import { base64ToBytes, importAesGcmKey, type KeyRef } from './crypto';
 
-/** コンソール接続設定。各 URL/鍵が null のときは該当機能を安全側へフォールバック。 */
+/** Console connection config. When a URL/key is null, the corresponding feature falls back to the safe side. */
 export interface ConsoleConfig {
-  /** 暗号化ポリシーの pull 先 URL。null のとき同期は no-op（ローカル既定を維持）。 */
+  /** URL to pull the encrypted policy from. When null, sync is a no-op (keeps local defaults). */
   policyUrl: string | null;
-  /** SSO 資格情報取得 API の URL。null のとき SSO autofill は無効。 */
+  /** URL of the SSO credential retrieval API. When null, SSO autofill is disabled. */
   credentialUrl: string | null;
-  /** One-Time Bypass 承認 API の URL。null のときローカル即時承認（デモ挙動）。 */
+  /** URL of the One-Time Bypass approval API. When null, immediate local approval (demo behavior). */
   bypassApprovalUrl: string | null;
-  /** BYOK 鍵の参照。null のとき暗号ペイロードを要する機能は無効。 */
+  /** Reference to the BYOK key. When null, features requiring an encrypted payload are disabled. */
   keyRef: KeyRef | null;
-  /** 監査ログ転送先 URL。null のときフラッシュは no-op（ローカル保持のみ）。 */
+  /** URL to forward audit logs to. When null, flushing is a no-op (local retention only). */
   telemetryUrl: string | null;
 }
 
 /**
- * 本番化の唯一の編集点。後日この定数の各 URL と keyRef を埋めるだけで、
- * ポリシー同期・SSO 資格情報・Bypass 承認・監査ログ転送のすべてがコンソール連携で稼働する。
+ * The single edit point for productionization. Later, simply filling in each URL
+ * and keyRef of this constant makes policy sync, SSO credentials, Bypass
+ * approval, and audit-log forwarding all operate via console integration.
  */
 export const CONSOLE_CONFIG: ConsoleConfig = {
   policyUrl: null,
@@ -39,9 +42,9 @@ export const CONSOLE_CONFIG: ConsoleConfig = {
 };
 
 /**
- * KeyRef を AES-GCM 用の CryptoKey へ解決する。
- *  - `raw-base64`: 設定に直接埋め込まれた Base64 鍵（暫定運用）。
- *  - `storage`   : chrome.storage.local の別キーに置かれた Base64 鍵。
+ * Resolves a KeyRef into a CryptoKey for AES-GCM.
+ *  - `raw-base64`: a Base64 key embedded directly in the config (interim operation).
+ *  - `storage`   : a Base64 key stored under a separate key in chrome.storage.local.
  */
 export async function resolveKey(ref: KeyRef): Promise<CryptoKey> {
   if (ref.source === 'raw-base64') {

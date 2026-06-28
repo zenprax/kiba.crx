@@ -9,7 +9,7 @@
 export const BLOCK_RULE_BASE_ID = 10000;
 export const ALLOW_RULE_BASE_ID = 20000;
 
-// Chrome の動的ルール上限（仕様上5,000）に対して安全マージンを持たせた実効上限。
+// Effective limit with a safety margin below Chrome's dynamic rule cap (5,000 per spec).
 export const DNR_DYNAMIC_RULE_LIMIT = 4900;
 
 /**

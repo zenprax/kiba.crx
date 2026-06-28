@@ -11,21 +11,10 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import type { AuditEventType, AuditLogEntry } from '../../types';
-import { Card } from '../Popup';
+import { Card } from '../components';
+import { EVENT_TAG } from '../components/utils';
 import { useLang } from '../i18n';
 import { AuditChart } from './AuditChart';
-
-const EVENT_LABEL: Record<AuditEventType, string> = {
-  'paste-block': 'PASTE',
-  'file-block': 'FILE',
-  'bypass-grant': 'BYPASS',
-  'paste-mask': 'MASK',
-  'sso-fill': 'SSO',
-  'tenant-block': 'TENANT',
-  'extension-audit': 'EXT',
-  'download-block': 'DL',
-  'screen-share': 'SCREEN',
-};
 
 const EVENT_ICON: Record<AuditEventType, LucideIcon> = {
   'paste-block': ClipboardX,
@@ -39,9 +28,9 @@ const EVENT_ICON: Record<AuditEventType, LucideIcon> = {
   'screen-share': MonitorPlay,
 };
 
-// アラート色は CVSS ベースの深刻度／ステータストークンへ対応づける。
-// ブロック系=critical、ファイル/マスク=medium、許可=safe、SSO=info。
-// extension-audit（紫）は専用 severity トークンが無いため viz パレットで代替する。
+// Alert colors map to CVSS-based severity / status tokens.
+// Block events=critical, file/mask=medium, allow=safe, SSO=info.
+// extension-audit (purple) has no dedicated severity token, so the viz palette is used instead.
 const EVENT_COLOR: Record<AuditEventType, string> = {
   'paste-block': 'text-severity-critical-text bg-severity-critical-bg',
   'file-block': 'text-severity-medium-text bg-severity-medium-bg',
@@ -50,11 +39,12 @@ const EVENT_COLOR: Record<AuditEventType, string> = {
   'sso-fill': 'text-status-info-text bg-status-info-bg',
   'tenant-block': 'text-severity-critical-text bg-severity-critical-bg',
   'extension-audit': 'text-viz-3 bg-bg-surface',
-  // ダウンロードブロック=critical（持ち込みリスク）、画面共有=info（監査のみ）。
+  // download-block=critical (data-exfiltration risk), screen-share=info (audit only).
   'download-block': 'text-severity-critical-text bg-severity-critical-bg',
   'screen-share': 'text-status-info-text bg-status-info-bg',
 };
 
+/** Scrollable list of recent local security-event audit entries. */
 export function AuditLog({ entries }: { entries: AuditLogEntry[] }) {
   const t = useLang();
 
@@ -85,7 +75,7 @@ export function AuditLog({ entries }: { entries: AuditLogEntry[] }) {
                     className={`mt-0.5 flex shrink-0 items-center gap-zp-1 rounded-zp-sm px-zp-1 py-0.5 text-zp-xs font-bold ${EVENT_COLOR[e.type]}`}
                   >
                     <Icon className="h-3 w-3" aria-hidden />
-                    {EVENT_LABEL[e.type]}
+                    {EVENT_TAG[e.type]}
                   </span>
                   <div className="min-w-0">
                     <div className="truncate text-text-primary">{e.detail}</div>

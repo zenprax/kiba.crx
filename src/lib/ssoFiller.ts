@@ -46,9 +46,7 @@ export function matchCredential(url: string, creds: SsoCredential[]): SsoCredent
  */
 export function setNativeValue(el: HTMLInputElement, value: string): void {
   const proto =
-    el instanceof HTMLTextAreaElement
-      ? HTMLTextAreaElement.prototype
-      : HTMLInputElement.prototype;
+    el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
   const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
   if (setter) {
     setter.call(el, value);
@@ -91,8 +89,9 @@ export function fillCredentials(doc: Document, cred: SsoCredential): FillResult 
     } else {
       form.submit();
     }
-    // パスワード値をDOMから即時消去して3rd Party JSによる窃取の隙を極限まで減らす。
-    // 送信処理はすでにキューに入っているため、値クリアはフォーム送信に影響しない。
+    // Immediately erase the password value from the DOM to minimize the window
+    // for theft by third-party JS. Since submission is already queued, clearing
+    // the value does not affect form submission.
     setTimeout(() => {
       setNativeValue(passwordEl, '');
       if (userEl) setNativeValue(userEl, '');
@@ -102,4 +101,3 @@ export function fillCredentials(doc: Document, cred: SsoCredential): FillResult 
 
   return { filled: Boolean(userEl), submitted: false, reason: 'no enclosing form to submit' };
 }
-

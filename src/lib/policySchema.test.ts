@@ -82,7 +82,7 @@ describe('parsePolicyPayload', () => {
   });
 
   it('featureModes の既知キーに不正なモード値があるとフィールドごと破棄する', () => {
-    // tenant に不正な enum 値 → object パース失敗 → featureModes 全体が落ちる。
+    // An invalid enum value for tenant -> object parse fails -> the whole featureModes is dropped.
     expect(parsePolicyPayload({ featureModes: { paste: 'DRY_RUN', tenant: 'NOPE' } })).toEqual({});
   });
 
@@ -94,7 +94,7 @@ describe('parsePolicyPayload', () => {
       customPatterns: { danger: ['rm -rf'], secrets: [{ label: 'Token', pattern: 'tok_\\w+' }] },
     });
 
-    // 512 文字を超える RegExp ソースは配列ごと破棄される（フィールド単位 safeParse）。
+    // A RegExp source longer than 512 chars makes the whole array be dropped (per-field safeParse).
     const tooLong = 'a'.repeat(600);
     expect(parsePolicyPayload({ customPatterns: { danger: [tooLong] } })).toEqual({});
   });
@@ -119,10 +119,12 @@ describe('parsePolicyPayload', () => {
       ],
     });
 
-    // source が不正なら配列ごと破棄。
+    // If source is invalid, the whole array is dropped.
     expect(
       parsePolicyPayload({
-        tenantRules: [{ provider: 'x', hostMatch: 'h', extract: { source: 'query', regex: 'r', group: 0 } }],
+        tenantRules: [
+          { provider: 'x', hostMatch: 'h', extract: { source: 'query', regex: 'r', group: 0 } },
+        ],
       }),
     ).toEqual({});
   });

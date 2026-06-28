@@ -50,7 +50,7 @@ export function resolveOfflineBehavior(settings: KibaSettings, opts: AuthContext
   return settings.auth.offlineStrategy;
 }
 
-/** OS 通知のヘルパー（content の通知経路と同じ basic 通知形式）。 */
+/** OS notification helper (same basic notification format as the content notification path). */
 function notify(title: string, message: string): void {
   chrome.notifications.create({
     type: 'basic',
@@ -62,27 +62,29 @@ function notify(title: string, message: string): void {
 }
 
 /**
- * ネットワーク復帰時の処理：最新ポリシーを即時 pull する。
- * 認証 TTL 更新やフラグ反映は compileActiveSettings 経由でストレージに書かれ、
- * Popup は onSettingsChanged で追随する。
+ * Network-recovery handler: immediately pulls the latest policy.
+ * Auth TTL updates and flag changes are written to storage via
+ * compileActiveSettings, and the Popup follows along via onSettingsChanged.
  */
 async function handleOnline(): Promise<void> {
   await syncManagedPolicy();
 }
 
 /**
- * オフライン遷移時の処理：現在の TTL を評価し、スタンドアローン挙動へ移行する。
- *  - TTL 切れ＋戦略 LOCKDOWN: フル・ロックダウンとして安全側へ寄せる
- *    （擬似 SSO を無効化し、ENFORCE を強制）。ユーザーへ通知する。
- *  - それ以外（TTL 有効 or FAIL_OPEN）: 自律駆動を継続。擬似 SSO だけは
- *    オフライン即ロックの仕様に従い無効化する（isSsoUsable と二重防御）。
+ * Offline-transition handler: evaluates the current TTL and moves into
+ * standalone behavior.
+ *  - TTL expired + LOCKDOWN strategy: fail safe into a full lockdown
+ *    (disable pseudo-SSO and force ENFORCE). Notify the user.
+ *  - Otherwise (TTL valid or FAIL_OPEN): keep operating autonomously. Only
+ *    pseudo-SSO is disabled, per the offline-immediate-lock spec (defense in
+ *    depth with isSsoUsable).
  */
 async function handleOffline(): Promise<void> {
   const settings = await getSettings();
   const behavior = resolveOfflineBehavior(settings, { online: false });
 
   if (behavior === 'LOCKDOWN') {
-    // 認証期限切れ：保護を最大化して全遮断側へ倒す。
+    // Auth expired: maximize protection and fail toward blocking everything.
     await setSettings({ mode: 'ENFORCE', ssoEnabled: false });
     notify(
       'kiba.crx — Standalone Lockdown',
@@ -91,7 +93,7 @@ async function handleOffline(): Promise<void> {
     return;
   }
 
-  // 自律駆動継続。擬似 SSO はオフラインで必ずロックする。
+  // Continue autonomous operation. Pseudo-SSO is always locked when offline.
   if (settings.ssoEnabled) {
     await setSettings({ ssoEnabled: false });
     notify(
@@ -102,9 +104,9 @@ async function handleOffline(): Promise<void> {
 }
 
 /**
- * ネットワーク状態の監視を配線する。online/offline それぞれで自律挙動を駆動する。
- * 判定ロジック（isSsoUsable / resolveOfflineBehavior）は引き続きオンデマンドで
- * 呼び出し側（content）からも参照される。
+ * Wires up network-state monitoring, driving autonomous behavior on online and
+ * offline respectively. The decision logic (isSsoUsable / resolveOfflineBehavior)
+ * is still referenced on demand by callers (content) as well.
  */
 export function initAuthHandler(): void {
   self.addEventListener('online', () => {
