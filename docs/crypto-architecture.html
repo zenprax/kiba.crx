@@ -1,0 +1,1435 @@
+<!DOCTYPE html>
+<html lang="ja" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Zenprax Browser Security — Zero-Knowledge Envelope Encryption Architecture</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            base:    '#0D1A2B',
+            surface: '#112236',
+            brand:   '#5499CA',
+            brandhv: '#84B8DC',
+            safe:    '#10b981',
+            danger:  '#ef4444',
+          },
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    * { box-sizing: border-box; }
+    html { background: #0D1A2B; }
+    body { background: #0D1A2B; color: #e2eaf3; font-family: 'Inter', system-ui, sans-serif; }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0D1A2B; }
+    ::-webkit-scrollbar-thumb { background: #5499CA44; border-radius: 3px; }
+
+    /* Gradient text */
+    .gradient-text {
+      background: linear-gradient(135deg, #84B8DC 0%, #5499CA 40%, #10b981 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* Noise overlay card */
+    .card {
+      background: #112236;
+      border: 1px solid rgba(84,153,202,0.18);
+      border-radius: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+    .card::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 0% 0%, rgba(84,153,202,0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    /* Section underline */
+    .section-label {
+      display: inline-block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      letter-spacing: 0.18em;
+      color: #5499CA;
+      text-transform: uppercase;
+      border: 1px solid rgba(84,153,202,0.35);
+      border-radius: 4px;
+      padding: 2px 10px;
+    }
+
+    /* Tab button */
+    .tab-btn {
+      background: transparent;
+      border: 1px solid rgba(84,153,202,0.25);
+      border-radius: 10px;
+      color: #7aa5c8;
+      font-size: 0.82rem;
+      font-weight: 500;
+      padding: 8px 18px;
+      cursor: pointer;
+      transition: all 0.2s;
+      white-space: nowrap;
+    }
+    .tab-btn:hover { border-color: #5499CA; color: #84B8DC; }
+    .tab-btn.active {
+      background: rgba(84,153,202,0.15);
+      border-color: #5499CA;
+      color: #84B8DC;
+    }
+
+    /* Section panel */
+    .section-panel { display: none; }
+    .section-panel.active { display: block; }
+
+    /* Step button */
+    .step-btn {
+      background: rgba(84,153,202,0.1);
+      border: 1px solid rgba(84,153,202,0.3);
+      border-radius: 10px;
+      color: #84B8DC;
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 10px 20px;
+      cursor: pointer;
+      transition: all 0.25s;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .step-btn:hover { background: rgba(84,153,202,0.22); border-color: #84B8DC; }
+    .step-btn.active { background: rgba(84,153,202,0.28); border-color: #84B8DC; box-shadow: 0 0 16px rgba(84,153,202,0.18); }
+    .step-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Log panel */
+    .log-panel {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      line-height: 1.8;
+      background: #080f1a;
+      border: 1px solid rgba(84,153,202,0.2);
+      border-radius: 10px;
+      padding: 16px;
+      overflow-y: auto;
+      max-height: 340px;
+    }
+    .log-line { display: flex; gap: 10px; align-items: flex-start; }
+    .log-ts { color: #3d5a73; flex-shrink: 0; }
+    .log-key { color: #5499CA; flex-shrink: 0; }
+    .log-val-hex { color: #10b981; }
+    .log-val-null { color: #ef4444; }
+    .log-val-str { color: #e2c98a; }
+    .log-val-ok { color: #10b981; font-weight: 700; }
+    .log-sep { color: #2a3f52; padding: 4px 0; border-top: 1px solid #1a2d3f; margin: 4px 0; font-size: 0.65rem; letter-spacing: 0.12em; }
+    .log-new { animation: fadeIn 0.35s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* State grid */
+    .state-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 640px) { .state-grid { grid-template-columns: 1fr; } }
+    .state-card {
+      background: #080f1a;
+      border: 1px solid rgba(84,153,202,0.15);
+      border-radius: 10px;
+      padding: 14px;
+    }
+    .state-card-title {
+      font-size: 0.68rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: #3d6a8a;
+      font-family: 'JetBrains Mono', monospace;
+      margin-bottom: 10px;
+      display: flex; align-items: center; gap: 6px;
+    }
+    .state-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin: 4px 0; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; }
+    .state-row-k { color: #5c7d96; flex-shrink: 0; }
+    .state-row-v { color: #7ab8a0; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 180px; }
+    .state-row-v.null { color: #4a2020; }
+    .state-row-v.active { color: #10b981; }
+    .state-row-v.flash { animation: flash 0.5s ease; }
+    @keyframes flash { 0%,100% { background: transparent; } 50% { background: rgba(16,185,129,0.2); border-radius: 3px; } }
+
+    /* Sequence diagram */
+    .seq-container { position: relative; }
+    .seq-actor {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      font-size: 0.72rem; font-weight: 600; color: #84B8DC;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .seq-actor-box {
+      background: rgba(84,153,202,0.15);
+      border: 1px solid rgba(84,153,202,0.4);
+      border-radius: 8px;
+      padding: 6px 14px;
+      font-size: 0.7rem;
+    }
+
+    /* Envelope diagram */
+    .env-outer {
+      border: 2px dashed #5499CA;
+      border-radius: 12px;
+      padding: 20px;
+      position: relative;
+    }
+    .env-inner {
+      border: 2px dashed #10b981;
+      border-radius: 8px;
+      padding: 16px;
+      position: relative;
+    }
+    .env-label {
+      position: absolute; top: -11px; left: 16px;
+      background: #112236;
+      padding: 0 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.68rem;
+      font-weight: 700;
+    }
+
+    /* Animated flow arrow */
+    .flow-arrow-anim {
+      stroke-dasharray: 200;
+      stroke-dashoffset: 200;
+      animation: drawArrow 0.6s ease forwards;
+    }
+    @keyframes drawArrow { to { stroke-dashoffset: 0; } }
+
+    /* Pulse dot */
+    .pulse-dot {
+      width: 8px; height: 8px; border-radius: 50%; display: inline-block;
+      background: #10b981;
+      box-shadow: 0 0 0 0 rgba(16,185,129,0.4);
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(16,185,129,0.5); } 70% { box-shadow: 0 0 0 8px rgba(16,185,129,0); } 100% { box-shadow: 0 0 0 0 rgba(16,185,129,0); } }
+
+    /* Danger badge */
+    .danger-badge {
+      background: rgba(239,68,68,0.12);
+      border: 1px solid rgba(239,68,68,0.35);
+      color: #ef4444;
+      border-radius: 6px;
+      padding: 2px 8px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .safe-badge {
+      background: rgba(16,185,129,0.12);
+      border: 1px solid rgba(16,185,129,0.35);
+      color: #10b981;
+      border-radius: 6px;
+      padding: 2px 8px;
+      font-size: 0.7rem;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    /* Matrix table */
+    .matrix-table { width: 100%; border-collapse: separate; border-spacing: 0; }
+    .matrix-table th {
+      background: rgba(84,153,202,0.12);
+      color: #84B8DC;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid rgba(84,153,202,0.2);
+    }
+    .matrix-table td {
+      padding: 12px 16px;
+      font-size: 0.78rem;
+      border-bottom: 1px solid rgba(84,153,202,0.08);
+      vertical-align: top;
+    }
+    .matrix-table tr:last-child td { border-bottom: none; }
+    .matrix-table tr:hover td { background: rgba(84,153,202,0.04); }
+
+    /* Hero glow */
+    .hero-glow {
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 50% -20%, rgba(84,153,202,0.12) 0%, transparent 60%);
+      pointer-events: none;
+    }
+
+    /* Progress bar */
+    .progress-bar {
+      height: 3px;
+      background: rgba(84,153,202,0.15);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #5499CA, #10b981);
+      border-radius: 2px;
+      transition: width 0.4s ease;
+    }
+
+    /* SVG animation step */
+    .seq-msg {
+      opacity: 0;
+      transition: opacity 0.4s ease;
+    }
+    .seq-msg.visible { opacity: 1; }
+  </style>
+</head>
+<body class="min-h-screen">
+
+  <!-- NAV -->
+  <nav class="sticky top-0 z-50 border-b border-brand/10" style="background: rgba(13,26,43,0.92); backdrop-filter: blur(16px);">
+    <div class="max-w-6xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-7 h-7 rounded-lg flex items-center justify-center" style="background: linear-gradient(135deg,#5499CA,#10b981);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </div>
+        <span class="font-bold text-sm tracking-wide text-white">Zenprax Browser Security</span>
+        <span class="hidden sm:block text-xs text-brand/60 font-mono border border-brand/20 rounded px-2 py-0.5">CRYPTO ARCHITECTURE</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="pulse-dot"></span>
+        <span class="text-xs text-safe font-mono">Server-Key-Zero</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <header class="relative overflow-hidden pt-20 pb-16 px-6">
+    <div class="hero-glow"></div>
+    <div class="max-w-4xl mx-auto text-center relative z-10">
+      <span class="section-label mb-6 inline-block">Zero-Knowledge Envelope Encryption</span>
+      <h1 class="text-4xl sm:text-5xl lg:text-6xl font-black leading-none mb-6">
+        <span class="text-white">サーバーは鍵を</span><br/>
+        <span class="gradient-text">永遠に知らない。</span>
+      </h1>
+      <p class="text-base sm:text-lg text-blue-200/60 max-w-2xl mx-auto leading-relaxed">
+        Zenprax Browser Security が実装する「2重構造エンベロープ暗号」は、<br class="hidden sm:block"/>
+        クラウド側に暗号の解読能力を一切持たせないことを<span class="text-brand font-semibold">数学的・構造的に保証</span>する。
+      </p>
+      <!-- Metric strip -->
+      <div class="mt-12 grid grid-cols-3 gap-4 max-w-xl mx-auto">
+        <div class="card p-4 text-center">
+          <div class="text-2xl font-black gradient-text font-mono">0</div>
+          <div class="text-xs text-blue-300/50 mt-1">Server Keys Held</div>
+        </div>
+        <div class="card p-4 text-center">
+          <div class="text-2xl font-black gradient-text font-mono">2-Layer</div>
+          <div class="text-xs text-blue-300/50 mt-1">Envelope Crypto</div>
+        </div>
+        <div class="card p-4 text-center">
+          <div class="text-2xl font-black gradient-text font-mono">AES-GCM</div>
+          <div class="text-xs text-blue-300/50 mt-1">256-bit per layer</div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- TAB NAV -->
+  <div class="sticky top-[57px] z-40 border-b border-brand/10 px-6 py-3" style="background: rgba(13,26,43,0.95); backdrop-filter: blur(12px);">
+    <div class="max-w-6xl mx-auto">
+      <div class="flex gap-2 overflow-x-auto pb-1">
+        <button class="tab-btn active" onclick="switchTab('vision')">
+          §1 設計思想
+        </button>
+        <button class="tab-btn" onclick="switchTab('matrix')">
+          §2 責任分界点
+        </button>
+        <button class="tab-btn" onclick="switchTab('envelope')">
+          §3 エンベロープ暗号
+        </button>
+        <button class="tab-btn" onclick="switchTab('simulator')">
+          §4 インタラクティブ・シミュレーター
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <main class="max-w-6xl mx-auto px-6 py-12">
+
+    <!-- ================================================================
+         SECTION 1: VISION
+         ================================================================ -->
+    <div id="panel-vision" class="section-panel active">
+
+      <!-- Intro statement -->
+      <div class="mb-10">
+        <span class="section-label">§1 — Vision &amp; Core Principles</span>
+        <h2 class="text-3xl font-black text-white mt-4 mb-4">
+          「暗号化済み」は、「安全」ではない。
+        </h2>
+        <p class="text-blue-200/60 text-base leading-relaxed max-w-2xl">
+          従来のクラウドセキュリティが見落としてきた本質的矛盾——
+          データを守るための鍵をデータと同じサーバーに置くという構造的欠陥を、
+          Zenprax は根本から排除する。
+        </p>
+      </div>
+
+      <!-- Core flaw illustration -->
+      <div class="card p-8 mb-8">
+        <div class="flex items-center gap-3 mb-6">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          <h3 class="text-lg font-bold text-white">構造的矛盾：同居する「錠前」と「鍵」</h3>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+          <!-- Traditional -->
+          <div>
+            <div class="danger-badge mb-4 inline-flex items-center gap-2">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+              従来型クラウドストレージ（偽ゼロ知識）
+            </div>
+            <div class="rounded-xl border border-danger/25 overflow-hidden" style="background: rgba(239,68,68,0.04);">
+              <div class="px-5 py-3 border-b border-danger/15 flex items-center gap-2">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+                <span class="text-xs font-mono text-danger/70">cloud-server.internal</span>
+              </div>
+              <div class="p-5 space-y-3">
+                <div class="flex items-center gap-3 p-3 rounded-lg" style="background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2);">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                  <div>
+                    <div class="text-xs font-mono text-white/80">encrypted_data.bin</div>
+                    <div class="text-xs text-danger/60 mt-0.5">暗号化済みデータ</div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-3 p-3 rounded-lg" style="background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.2);">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+                  <div>
+                    <div class="text-xs font-mono text-danger">decryption_key.pem ← 鍵が同居！</div>
+                    <div class="text-xs text-danger/60 mt-0.5">復号鍵（サーバー管理）</div>
+                  </div>
+                </div>
+                <div class="mt-4 p-3 rounded-lg" style="background: rgba(239,68,68,0.06); border: 1px dashed rgba(239,68,68,0.3);">
+                  <div class="text-xs text-danger/80 font-mono">
+                    攻撃者がサーバーに侵入 →<br/>
+                    データ <strong>&amp;</strong> 鍵を同時奪取 →<br/>
+                    完全解読 <span class="text-danger">✗ COMPROMISED</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Zenprax -->
+          <div>
+            <div class="safe-badge mb-4 inline-flex items-center gap-2">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              Zenprax Zero-Knowledge（真のゼロ知識）
+            </div>
+            <div class="rounded-xl border border-safe/25 overflow-hidden" style="background: rgba(16,185,129,0.03);">
+              <div class="px-5 py-3 border-b border-safe/15 flex items-center gap-2">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+                <span class="text-xs font-mono text-safe/70">zenprax-cloud.infra</span>
+              </div>
+              <div class="p-5 space-y-3">
+                <div class="flex items-center gap-3 p-3 rounded-lg" style="background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2);">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/></svg>
+                  <div>
+                    <div class="text-xs font-mono text-white/80">policy.bin (ciphertext)</div>
+                    <div class="text-xs text-safe/60 mt-0.5">暗号Blob — 不透明データ</div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-3 p-3 rounded-lg" style="background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2);">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                  <div>
+                    <div class="text-xs font-mono text-white/80">wrappedKey (encrypted DEK)</div>
+                    <div class="text-xs text-safe/60 mt-0.5">暗号化されたデータキー（解読不能）</div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-3 p-3 rounded-lg border border-dashed border-safe/20">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3d6a8a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+                  <div>
+                    <div class="text-xs font-mono text-blue-300/40">K_master — <span class="text-danger/70">NOT PRESENT</span></div>
+                    <div class="text-xs text-blue-300/30 mt-0.5">マスターキーは存在しない</div>
+                  </div>
+                </div>
+                <div class="mt-4 p-3 rounded-lg" style="background: rgba(16,185,129,0.06); border: 1px dashed rgba(16,185,129,0.3);">
+                  <div class="text-xs text-safe/80 font-mono">
+                    攻撃者がサーバーに侵入 →<br/>
+                    暗号Blob &amp; wrappedKey を奪取 →<br/>
+                    K_master がなければ復号不能 <span class="text-safe">✓ SECURE</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Principles grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <!-- HYOK -->
+        <div class="card p-6">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background: rgba(84,153,202,0.15); border: 1px solid rgba(84,153,202,0.3);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5499CA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+            </div>
+            <div>
+              <div class="text-xs font-mono text-brand/70 mb-0.5">HYOK / BYOE</div>
+              <h3 class="font-bold text-white text-sm">所有と保管の完全分離</h3>
+            </div>
+          </div>
+          <p class="text-blue-200/55 text-sm leading-relaxed">
+            Hold Your Own Key（HYOK）/ Bring Your Own Encryption（BYOE）の原則を徹底実装。
+            クラウドは「中身を1ミリも解読できない<strong class="text-brand">暗号箱の預かり所</strong>」に機能を縮退させ、
+            データ主権を100%顧客エッジに帰属させる。
+          </p>
+        </div>
+
+        <!-- Opaque repo -->
+        <div class="card p-6">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+            </div>
+            <div>
+              <div class="text-xs font-mono text-safe/70 mb-0.5">Opaque Repository</div>
+              <h3 class="font-bold text-white text-sm">不透過リポジトリとしてのクラウド</h3>
+            </div>
+          </div>
+          <p class="text-blue-200/55 text-sm leading-relaxed">
+            サーバーはポリシーBlobと暗号化済みキー（<span class="font-mono text-brand text-xs">wrappedKey</span>）を
+            機械的に保管・転送するだけ。クエリ処理・再計算・スキーマ解釈能力を一切持たない
+            <strong class="text-safe">完全ステートレスリポジトリ</strong>として設計。
+          </p>
+        </div>
+
+        <!-- Edge sovereignty -->
+        <div class="card p-6">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background: rgba(84,153,202,0.15); border: 1px solid rgba(84,153,202,0.3);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#5499CA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            </div>
+            <div>
+              <div class="text-xs font-mono text-brand/70 mb-0.5">Edge Sovereignty</div>
+              <h3 class="font-bold text-white text-sm">エッジ側ブラウザの完全自律</h3>
+            </div>
+          </div>
+          <p class="text-blue-200/55 text-sm leading-relaxed">
+            復号・ポリシー解決・属性評価はすべてブラウザ拡張機能のローカルメモリ内で完結。
+            <span class="font-mono text-brand text-xs">compileActiveSettings()</span> は
+            クラウド接続なしに自律実行し、結果をメモリに保持する。
+          </p>
+        </div>
+
+        <!-- Cryptographic zero disclosure -->
+        <div class="card p-6">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style="background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.3);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+            </div>
+            <div>
+              <div class="text-xs font-mono text-safe/70 mb-0.5">Cryptographic Zero Disclosure</div>
+              <h3 class="font-bold text-white text-sm">開示要求への暗号学的無力化</h3>
+            </div>
+          </div>
+          <p class="text-blue-200/55 text-sm leading-relaxed">
+            捜査令状・内部不正・ハッキングによるサーバー完全制圧が起きても、
+            物理的に <span class="font-mono text-safe text-xs">K_master</span> が存在しないため、
+            どれだけ圧力をかけても機密を開示する手段が<strong class="text-safe">数学的に存在しない</strong>。
+          </p>
+        </div>
+      </div>
+
+    </div><!-- /panel-vision -->
+
+
+    <!-- ================================================================
+         SECTION 2: MATRIX
+         ================================================================ -->
+    <div id="panel-matrix" class="section-panel">
+
+      <div class="mb-10">
+        <span class="section-label">§2 — Responsibility Boundary Matrix</span>
+        <h2 class="text-3xl font-black text-white mt-4 mb-4">
+          責任分界点マトリクス
+        </h2>
+        <p class="text-blue-200/60 text-base leading-relaxed max-w-2xl">
+          いかなる脅威シナリオにおいても、Zenprax Cloud が機密を漏洩させることが
+          物理的・暗号学的に不可能であることを、責任の境界から明確に示す。
+        </p>
+      </div>
+
+      <!-- Trust boundary visual -->
+      <div class="card p-6 mb-8">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-0">
+          <!-- Cloud side -->
+          <div class="p-6 border-b lg:border-b-0 lg:border-r border-brand/10">
+            <div class="flex items-center gap-2 mb-5">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5499CA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+              <span class="text-sm font-bold text-brand">ZENPRAX Cloud</span>
+              <span class="danger-badge text-xs">Untrusted Zone</span>
+            </div>
+            <div class="space-y-3">
+              <div class="flex items-start gap-3">
+                <svg class="mt-0.5 flex-shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <div>
+                  <div class="text-sm font-semibold text-white">保管する（Can Store）</div>
+                  <div class="text-xs text-blue-200/50 font-mono mt-1">policy.bin — 暗号Blob（不透明）</div>
+                  <div class="text-xs text-blue-200/50 font-mono">wrappedKey — 暗号化済みDEK</div>
+                </div>
+              </div>
+              <div class="flex items-start gap-3">
+                <svg class="mt-0.5 flex-shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <div>
+                  <div class="text-sm font-semibold text-white">転送する（Can Relay）</div>
+                  <div class="text-xs text-blue-200/50 mt-1">リクエストに応じて Blob をそのまま返す。内容の解釈なし。</div>
+                </div>
+              </div>
+              <hr class="border-danger/15 my-4"/>
+              <div class="flex items-start gap-3">
+                <svg class="mt-0.5 flex-shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                <div>
+                  <div class="text-sm font-semibold text-danger">不可能（Cannot）</div>
+                  <div class="text-xs text-danger/60 mt-1">
+                    復号・スキーマ解釈・クエリ実行・K_master の保有・wrappedKey の解除
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Edge side -->
+          <div class="p-6">
+            <div class="flex items-center gap-2 mb-5">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              <span class="text-sm font-bold text-safe">Customer Edge（MDM + Extension）</span>
+              <span class="safe-badge text-xs">Trusted Zone</span>
+            </div>
+            <div class="space-y-3">
+              <div class="flex items-start gap-3">
+                <svg class="mt-0.5 flex-shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <div>
+                  <div class="text-sm font-semibold text-white">鍵生成（Key Generation）</div>
+                  <div class="text-xs text-blue-200/50 font-mono mt-1">K_master — MDMが生成・配備</div>
+                  <div class="text-xs text-blue-200/50 font-mono">K_data — 拡張機能が毎回乱数生成</div>
+                </div>
+              </div>
+              <div class="flex items-start gap-3">
+                <svg class="mt-0.5 flex-shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <div>
+                  <div class="text-sm font-semibold text-white">ローカル復号（Local Decrypt）</div>
+                  <div class="text-xs text-blue-200/50 mt-1">ブラウザ拡張のローカルメモリ上でのみ実行。ネットワーク送信なし。</div>
+                </div>
+              </div>
+              <div class="flex items-start gap-3">
+                <svg class="mt-0.5 flex-shrink-0" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <div>
+                  <div class="text-sm font-semibold text-white">鍵の即時揮発（Key Zeroization）</div>
+                  <div class="text-xs text-blue-200/50 mt-1">処理完了後、K_data をメモリから即時消去。永続化しない。</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Threat scenario table -->
+      <div class="card overflow-hidden mb-8">
+        <div class="px-6 py-4 border-b border-brand/10">
+          <h3 class="font-bold text-white">脅威シナリオ別・漏洩可能性マトリクス</h3>
+          <p class="text-xs text-blue-200/40 mt-1">あらゆる攻撃ベクタに対するZenpraxアーキテクチャの耐性評価</p>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="matrix-table">
+            <thead>
+              <tr>
+                <th style="min-width:200px">脅威シナリオ</th>
+                <th style="min-width:130px">攻撃対象</th>
+                <th style="min-width:160px">入手可能なもの</th>
+                <th style="min-width:120px">機密漏洩</th>
+                <th style="min-width:220px">理由</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="text-white text-sm font-medium">外部ハッカーによるDBフルダンプ</td>
+                <td><span class="font-mono text-xs text-brand">Zenprax Cloud DB</span></td>
+                <td class="font-mono text-xs text-blue-200/60">policy.bin, wrappedKey</td>
+                <td><span class="danger-badge">不可能</span></td>
+                <td class="text-xs text-blue-200/50">K_master が DB に存在しないため wrappedKey を解除不能</td>
+              </tr>
+              <tr>
+                <td class="text-white text-sm font-medium">内部不正（Zenprax従業員）</td>
+                <td><span class="font-mono text-xs text-brand">全社内システム</span></td>
+                <td class="font-mono text-xs text-blue-200/60">policy.bin, wrappedKey</td>
+                <td><span class="danger-badge">不可能</span></td>
+                <td class="text-xs text-blue-200/50">K_master はZenprax組織に物理的に存在しない</td>
+              </tr>
+              <tr>
+                <td class="text-white text-sm font-medium">政府・捜査令状による開示命令</td>
+                <td><span class="font-mono text-xs text-brand">Zenprax Cloud</span></td>
+                <td class="font-mono text-xs text-blue-200/60">policy.bin, wrappedKey</td>
+                <td><span class="danger-badge">不可能</span></td>
+                <td class="text-xs text-blue-200/50">開示すべき復号能力が構造上ゼロ。技術的に応答不能</td>
+              </tr>
+              <tr>
+                <td class="text-white text-sm font-medium">TLS中間者攻撃（MITM）</td>
+                <td><span class="font-mono text-xs text-brand">通信経路</span></td>
+                <td class="font-mono text-xs text-blue-200/60">暗号化されたBlobのみ</td>
+                <td><span class="danger-badge">不可能</span></td>
+                <td class="text-xs text-blue-200/50">傍受できるのは AES-GCM 暗号文のみ。平文を含まない</td>
+              </tr>
+              <tr>
+                <td class="text-white text-sm font-medium">拡張機能メモリダンプ（実行中）</td>
+                <td><span class="font-mono text-xs text-safe">Edge Extension</span></td>
+                <td class="font-mono text-xs text-blue-200/60">処理中の K_data（瞬間的）</td>
+                <td><span class="safe-badge">限定リスク</span></td>
+                <td class="text-xs text-blue-200/50">K_data は処理後即時揮発。K_master はstorage.managedのみ</td>
+              </tr>
+              <tr>
+                <td class="text-white text-sm font-medium">MDM侵害による K_master 漏洩</td>
+                <td><span class="font-mono text-xs text-safe">MDM Infrastructure</span></td>
+                <td class="font-mono text-xs text-blue-200/60">K_master + wrappedKey</td>
+                <td><span class="safe-badge">理論的リスク</span></td>
+                <td class="text-xs text-blue-200/50">MDMセキュリティは顧客責任（BYOKの本質）。ローテーションで影響範囲最小化</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- GDPR / Compliance note -->
+      <div class="card p-6 flex gap-4">
+        <div class="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style="background: rgba(84,153,202,0.1); border: 1px solid rgba(84,153,202,0.25);">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#5499CA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <div>
+          <h4 class="font-bold text-white text-sm mb-2">コンプライアンス・インプリケーション</h4>
+          <p class="text-blue-200/55 text-sm leading-relaxed">
+            このアーキテクチャは GDPR Article 25（Privacy by Design）・HIPAA §164.312・ISO/IEC 27001 A.10.1 に対する
+            <strong class="text-brand">技術的実装の証拠</strong>として機能する。
+            「我々はデータを暗号化している」ではなく、「我々は<em>物理的に</em>復号する手段を持たない」という
+            より強力なコンプライアンス態位を実現する。
+          </p>
+        </div>
+      </div>
+
+    </div><!-- /panel-matrix -->
+
+
+    <!-- ================================================================
+         SECTION 3: ENVELOPE
+         ================================================================ -->
+    <div id="panel-envelope" class="section-panel">
+
+      <div class="mb-10">
+        <span class="section-label">§3 — Dual-Layer Envelope Encryption Protocol</span>
+        <h2 class="text-3xl font-black text-white mt-4 mb-4">
+          なぜ2重構造が必要か
+        </h2>
+        <p class="text-blue-200/60 text-base leading-relaxed max-w-2xl">
+          1つの鍵で直接暗号化する「シングルキー方式」には、鍵ローテーションと暗号疲弊という
+          2つの解決不能な問題がある。エンベロープ暗号はこれを構造で解決する。
+        </p>
+      </div>
+
+      <!-- Envelope structure diagram -->
+      <div class="card p-8 mb-8">
+        <h3 class="font-bold text-white mb-6 text-sm flex items-center gap-2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5499CA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          エンベロープ暗号の構造
+        </h3>
+        <div class="env-outer">
+          <span class="env-label text-brand">外殻（Outer Envelope）— K_master で暗号化された K_data = wrappedKey</span>
+          <div class="env-inner mt-4">
+            <span class="env-label text-safe">内殻（Inner Envelope）— K_data で暗号化されたポリシーデータ = policy.bin</span>
+            <div class="mt-4 p-4 rounded-lg text-center" style="background: rgba(16,185,129,0.07);">
+              <div class="font-mono text-xs text-white/70">plaintext: PolicyDocument</div>
+              <div class="font-mono text-xs text-safe/70 mt-1">{ "blockList": [...], "settings": {...} }</div>
+            </div>
+          </div>
+          <div class="mt-4 flex items-center justify-between text-xs font-mono">
+            <span class="text-brand/70">wrappedKey: Enc(K_master, K_data)</span>
+            <span class="text-safe/70">policy.bin: Enc(K_data, plaintext)</span>
+          </div>
+        </div>
+
+        <!-- Key legend -->
+        <div class="mt-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div class="p-3 rounded-lg" style="background: rgba(84,153,202,0.08); border: 1px solid rgba(84,153,202,0.2);">
+            <div class="font-mono text-xs text-brand font-bold">K_master</div>
+            <div class="text-xs text-blue-200/50 mt-1">MDM配備。顧客が生成・管理。Zenprax Cloud に存在しない。</div>
+          </div>
+          <div class="p-3 rounded-lg" style="background: rgba(16,185,129,0.08); border: 1px solid rgba(16,185,129,0.2);">
+            <div class="font-mono text-xs text-safe font-bold">K_data（DEK）</div>
+            <div class="text-xs text-blue-200/50 mt-1">毎回 crypto.getRandomValues で生成。使用後即時揮発。</div>
+          </div>
+          <div class="p-3 rounded-lg" style="background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);">
+            <div class="font-mono text-xs text-white/60 font-bold">wrappedKey</div>
+            <div class="text-xs text-blue-200/50 mt-1">K_master で暗号化された K_data。サーバーに保管可能。</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Two problems solved -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+
+        <!-- Problem 1: Key rotation -->
+        <div class="card p-6">
+          <div class="flex items-center gap-3 mb-5">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-black" style="background: rgba(84,153,202,0.15); border: 1px solid rgba(84,153,202,0.3); color: #5499CA;">1</div>
+            <h3 class="font-bold text-white text-sm">鍵ローテーションの O(1) 化</h3>
+          </div>
+
+          <div class="mb-4 p-4 rounded-lg" style="background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.2);">
+            <div class="text-xs font-mono text-danger/80 font-bold mb-2">▶ シングルキー方式の悪夢</div>
+            <div class="flex items-center gap-2 text-xs text-blue-200/50">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              旧マスターキーで暗号化された<strong class="text-white"> 全データ（GB〜TB）を再暗号化</strong>
+            </div>
+            <div class="text-xs text-danger/60 font-mono mt-2">時間計算量: O(n) → ダウンタイム不可避</div>
+          </div>
+
+          <div class="p-4 rounded-lg" style="background: rgba(16,185,129,0.06); border: 1px solid rgba(16,185,129,0.2);">
+            <div class="text-xs font-mono text-safe/80 font-bold mb-2">▶ エンベロープ方式の解法</div>
+            <div class="space-y-1 text-xs text-blue-200/60">
+              <div class="flex items-center gap-2">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <span><span class="font-mono text-safe">wrappedKey</span>（数十バイト）のみ再ラップ</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <span><span class="font-mono text-safe">policy.bin</span>（データ本体）は一切触らない</span>
+              </div>
+            </div>
+            <div class="text-xs text-safe/60 font-mono mt-2">時間計算量: O(1) → 瞬時完了・ダウンタイムゼロ</div>
+          </div>
+
+          <!-- Visual comparison -->
+          <div class="mt-4 flex gap-3">
+            <div class="flex-1 text-center p-3 rounded-lg" style="background: rgba(239,68,68,0.05);">
+              <div class="font-mono text-xs text-danger/70">従来型</div>
+              <div class="text-xl font-black text-danger mt-1">≈GB</div>
+              <div class="text-xs text-blue-200/40">再暗号化コスト</div>
+            </div>
+            <div class="flex items-center text-brand/40">→</div>
+            <div class="flex-1 text-center p-3 rounded-lg" style="background: rgba(16,185,129,0.05);">
+              <div class="font-mono text-xs text-safe/70">Zenprax</div>
+              <div class="text-xl font-black text-safe mt-1">48B</div>
+              <div class="text-xs text-blue-200/40">再ラップコスト（wrappedKey）</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Problem 2: Key fatigue -->
+        <div class="card p-6">
+          <div class="flex items-center gap-3 mb-5">
+            <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-black" style="background: rgba(84,153,202,0.15); border: 1px solid rgba(84,153,202,0.3); color: #5499CA;">2</div>
+            <h3 class="font-bold text-white text-sm">暗号学的疲弊（Key Fatigue）の完全回避</h3>
+          </div>
+
+          <div class="mb-4 p-4 rounded-lg" style="background: rgba(239,68,68,0.06); border: 1px solid rgba(239,68,68,0.2);">
+            <div class="text-xs font-mono text-danger/80 font-bold mb-2">▶ 同一鍵・大量暗号化の数学的脆弱性</div>
+            <p class="text-xs text-blue-200/50 leading-relaxed">
+              AES-GCM では同じ鍵で大量のデータを暗号化すると、
+              <strong class="text-white">nonce衝突確率が 2^32 ブロックで無視できなくなる</strong>。
+              解析攻撃でパターンが統計的に漏洩するリスクがある。
+            </p>
+          </div>
+
+          <div class="p-4 rounded-lg" style="background: rgba(16,185,129,0.06); border: 1px solid rgba(16,185,129,0.2);">
+            <div class="text-xs font-mono text-safe/80 font-bold mb-2">▶ ランダムDEKによる完全防衛</div>
+            <div class="space-y-1 text-xs text-blue-200/60">
+              <div class="flex items-center gap-2">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>データ生成ごとに <span class="font-mono text-safe">crypto.getRandomValues()</span> で K_data を生成</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>各 K_data は1回だけ使用して即時廃棄（use-once key）</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                <span>K_master は鍵ラッピングのみに使用、大量データに触れない</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Code snippet -->
+          <div class="mt-4 p-3 rounded-lg" style="background: #060d14; border: 1px solid rgba(84,153,202,0.15);">
+            <div class="text-xs text-brand/50 font-mono mb-2">//  crypto.ts — DEK生成（実際のコード）</div>
+            <pre class="text-xs font-mono leading-relaxed overflow-x-auto"><code><span style="color:#5499CA">const</span> <span style="color:#84B8DC">kData</span> <span style="color:#5c7d96">=</span> <span style="color:#10b981">crypto</span>.<span style="color:#10b981">getRandomValues</span>(
+  <span style="color:#5499CA">new</span> <span style="color:#84B8DC">Uint8Array</span>(<span style="color:#e2c98a">32</span>)  <span style="color:#3d5a73">// 256-bit DEK</span>
+);
+<span style="color:#3d5a73">// ... 暗号化処理 ...</span>
+<span style="color:#10b981">kData</span>.<span style="color:#10b981">fill</span>(<span style="color:#e2c98a">0</span>);  <span style="color:#3d5a73">// 即時ゼロフィル</span></code></pre>
+          </div>
+        </div>
+      </div>
+
+      <!-- Protocol flow -->
+      <div class="card p-6">
+        <h3 class="font-bold text-white mb-6 text-sm flex items-center gap-2">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5499CA" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          暗号プロトコル全フロー
+        </h3>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <!-- Encryption -->
+          <div>
+            <div class="text-xs font-mono text-brand/70 mb-3 font-bold uppercase tracking-wider">暗号化（管理者）</div>
+            <div class="space-y-2">
+              <div class="flex items-start gap-3">
+                <div class="w-5 h-5 rounded-full bg-brand/20 border border-brand/40 flex items-center justify-center text-xs font-bold text-brand flex-shrink-0 mt-0.5">1</div>
+                <div class="text-xs text-blue-200/60">
+                  <span class="font-mono text-brand">K_data</span> ← <span class="font-mono text-safe">crypto.getRandomValues(32)</span>
+                  <div class="text-blue-200/40 mt-0.5">256bit DEK をCSPRNGで生成</div>
+                </div>
+              </div>
+              <div class="flex items-start gap-3">
+                <div class="w-5 h-5 rounded-full bg-brand/20 border border-brand/40 flex items-center justify-center text-xs font-bold text-brand flex-shrink-0 mt-0.5">2</div>
+                <div class="text-xs text-blue-200/60">
+                  <span class="font-mono text-safe">policy.bin</span> ← <span class="font-mono text-brand">AES-GCM-256(K_data, plaintext)</span>
+                  <div class="text-blue-200/40 mt-0.5">ポリシーJSONをDEKで暗号化</div>
+                </div>
+              </div>
+              <div class="flex items-start gap-3">
+                <div class="w-5 h-5 rounded-full bg-brand/20 border border-brand/40 flex items-center justify-center text-xs font-bold text-brand flex-shrink-0 mt-0.5">3</div>
+                <div class="text-xs text-blue-200/60">
+                  <span class="font-mono text-white">wrappedKey</span> ← <span class="font-mono text-brand">AES-KW(K_master, K_data)</span>
+                  <div class="text-blue-200/40 mt-0.5">DEKをマスターキーでラップ</div>
+                </div>
+              </div>
+              <div class="flex items-start gap-3">
+                <div class="w-5 h-5 rounded-full bg-brand/20 border border-brand/40 flex items-center justify-center text-xs font-bold text-brand flex-shrink-0 mt-0.5">4</div>
+                <div class="text-xs text-blue-200/60">
+                  <span class="font-mono text-safe">policy.bin</span> + <span class="font-mono text-white">wrappedKey</span> → Cloud Upload
+                  <div class="text-blue-200/40 mt-0.5">K_data はここで即時揮発</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <!-- Decryption -->
+          <div>
+            <div class="text-xs font-mono text-safe/70 mb-3 font-bold uppercase tracking-wider">復号（エッジ拡張機能）</div>
+            <div class="space-y-2">
+              <div class="flex items-start gap-3">
+                <div class="w-5 h-5 rounded-full bg-safe/20 border border-safe/40 flex items-center justify-center text-xs font-bold text-safe flex-shrink-0 mt-0.5">A</div>
+                <div class="text-xs text-blue-200/60">
+                  Cloud → <span class="font-mono text-safe">policy.bin</span> + <span class="font-mono text-white">wrappedKey</span> 取得
+                  <div class="text-blue-200/40 mt-0.5">サーバーは内容を解釈しない</div>
+                </div>
+              </div>
+              <div class="flex items-start gap-3">
+                <div class="w-5 h-5 rounded-full bg-safe/20 border border-safe/40 flex items-center justify-center text-xs font-bold text-safe flex-shrink-0 mt-0.5">B</div>
+                <div class="text-xs text-blue-200/60">
+                  <span class="font-mono text-brand">K_data</span> ← <span class="font-mono text-safe">AES-KW-Unwrap(K_master, wrappedKey)</span>
+                  <div class="text-blue-200/40 mt-0.5">ローカルメモリ上でDEKをアンラップ</div>
+                </div>
+              </div>
+              <div class="flex items-start gap-3">
+                <div class="w-5 h-5 rounded-full bg-safe/20 border border-safe/40 flex items-center justify-center text-xs font-bold text-safe flex-shrink-0 mt-0.5">C</div>
+                <div class="text-xs text-blue-200/60">
+                  <span class="font-mono text-white">plaintext</span> ← <span class="font-mono text-brand">AES-GCM-Decrypt(K_data, policy.bin)</span>
+                  <div class="text-blue-200/40 mt-0.5">ポリシー平文をローカル復号</div>
+                </div>
+              </div>
+              <div class="flex items-start gap-3">
+                <div class="w-5 h-5 rounded-full bg-safe/20 border border-safe/40 flex items-center justify-center text-xs font-bold text-safe flex-shrink-0 mt-0.5">D</div>
+                <div class="text-xs text-blue-200/60">
+                  <span class="font-mono text-safe">compileActiveSettings(plaintext)</span> → <span class="font-mono text-white">apply</span>
+                  <div class="text-blue-200/40 mt-0.5">K_data をゼロフィル後、ポリシー適用</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- /panel-envelope -->
+
+
+    <!-- ================================================================
+         SECTION 4: SIMULATOR
+         ================================================================ -->
+    <div id="panel-simulator" class="section-panel">
+
+      <div class="mb-8">
+        <span class="section-label">§4 — Interactive Sequence &amp; State Simulator</span>
+        <h2 class="text-3xl font-black text-white mt-4 mb-4">
+          ライフサイクル・シミュレーター
+        </h2>
+        <p class="text-blue-200/60 text-base leading-relaxed max-w-2xl">
+          ステップを進めるごとに、鍵とデータのライフサイクルがリアルタイムに可視化される。
+          トラスト境界（エッジ ⇄ クラウド）を越える情報の流れを追跡せよ。
+        </p>
+      </div>
+
+      <!-- Progress -->
+      <div class="mb-6">
+        <div class="flex justify-between text-xs font-mono text-blue-200/40 mb-2">
+          <span>SIMULATION PROGRESS</span>
+          <span id="progress-label">0 / 4</span>
+        </div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+        </div>
+      </div>
+
+      <!-- Step buttons -->
+      <div class="flex flex-wrap gap-3 mb-8">
+        <button class="step-btn" id="step-btn-1" onclick="runStep(1)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+          Step 1: 管理者暗号化
+        </button>
+        <button class="step-btn" id="step-btn-2" onclick="runStep(2)" disabled>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Step 2: MDM プロビジョニング
+        </button>
+        <button class="step-btn" id="step-btn-3" onclick="runStep(3)" disabled>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+          Step 3: ステートレス同期
+        </button>
+        <button class="step-btn" id="step-btn-4" onclick="runStep(4)" disabled>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          Step 4: エッジ動的解決
+        </button>
+        <button class="step-btn ml-auto" onclick="resetSimulator()" style="border-color: rgba(239,68,68,0.3); color: #ef4444;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-3.1"/></svg>
+          リセット
+        </button>
+      </div>
+
+      <!-- Main simulator grid -->
+      <div class="grid grid-cols-1 xl:grid-cols-5 gap-6 mb-6">
+
+        <!-- Sequence diagram (3/5) -->
+        <div class="xl:col-span-3 card p-6">
+          <div class="text-xs font-mono text-brand/60 mb-4 uppercase tracking-wider">シーケンス図</div>
+
+          <!-- Actor header -->
+          <div class="grid grid-cols-3 gap-4 mb-4">
+            <div class="seq-actor">
+              <div class="seq-actor-box">Admin Browser</div>
+              <div class="w-px h-2 bg-brand/30"></div>
+            </div>
+            <div class="seq-actor">
+              <div class="seq-actor-box" style="border-color: rgba(16,185,129,0.4); color: #10b981; background: rgba(16,185,129,0.08);">MDM / Extension</div>
+              <div class="w-px h-2 bg-safe/30"></div>
+            </div>
+            <div class="seq-actor">
+              <div class="seq-actor-box" style="border-color: rgba(84,153,202,0.25); color: #7aa5c8; background: rgba(84,153,202,0.05);">Zenprax Cloud</div>
+              <div class="w-px h-2 bg-brand/20"></div>
+            </div>
+          </div>
+
+          <!-- SVG Sequence diagram -->
+          <svg id="seq-svg" viewBox="0 0 560 340" width="100%" style="min-height:220px;">
+            <!-- Lifelines -->
+            <line x1="93" y1="0" x2="93" y2="340" stroke="rgba(84,153,202,0.2)" stroke-width="1" stroke-dasharray="4,4"/>
+            <line x1="280" y1="0" x2="280" y2="340" stroke="rgba(16,185,129,0.2)" stroke-width="1" stroke-dasharray="4,4"/>
+            <line x1="467" y1="0" x2="467" y2="340" stroke="rgba(84,153,202,0.1)" stroke-width="1" stroke-dasharray="4,4"/>
+
+            <!-- Step 1: Admin generates K_data, encrypts -->
+            <g id="seq-step1" class="seq-msg">
+              <!-- K_data generation box -->
+              <rect x="20" y="18" width="146" height="26" rx="4" fill="rgba(84,153,202,0.1)" stroke="rgba(84,153,202,0.3)" stroke-width="1"/>
+              <text x="93" y="35" text-anchor="middle" fill="#84B8DC" font-family="JetBrains Mono" font-size="9">generate K_data (CSRNG)</text>
+              <!-- policy.bin arrow -->
+              <line x1="93" y1="58" x2="467" y2="58" stroke="#5499CA" stroke-width="1.5" marker-end="url(#arrow-brand)"/>
+              <text x="280" y="52" text-anchor="middle" fill="#84B8DC" font-family="JetBrains Mono" font-size="9">upload policy.bin + wrappedKey</text>
+              <!-- K_data zeroize -->
+              <rect x="20" y="68" width="146" height="22" rx="4" fill="rgba(239,68,68,0.08)" stroke="rgba(239,68,68,0.3)" stroke-width="1"/>
+              <text x="93" y="83" text-anchor="middle" fill="#ef4444" font-family="JetBrains Mono" font-size="9">K_data.fill(0) — zeroize</text>
+            </g>
+
+            <!-- Step 2: MDM provisions K_master -->
+            <g id="seq-step2" class="seq-msg">
+              <line x1="93" y1="116" x2="280" y2="116" stroke="#10b981" stroke-width="1.5" stroke-dasharray="6,3" marker-end="url(#arrow-safe)"/>
+              <text x="186" y="110" text-anchor="middle" fill="#10b981" font-family="JetBrains Mono" font-size="9">MDM push: orgId + K_master</text>
+              <rect x="160" y="122" width="240" height="22" rx="4" fill="rgba(16,185,129,0.08)" stroke="rgba(16,185,129,0.25)" stroke-width="1"/>
+              <text x="280" y="137" text-anchor="middle" fill="#10b981" font-family="JetBrains Mono" font-size="9">storage.managed — silent, no user action</text>
+            </g>
+
+            <!-- Step 3: Sync request / response -->
+            <g id="seq-step3" class="seq-msg">
+              <line x1="280" y1="182" x2="467" y2="182" stroke="#5499CA" stroke-width="1.5" marker-end="url(#arrow-brand)"/>
+              <text x="373" y="176" text-anchor="middle" fill="#84B8DC" font-family="JetBrains Mono" font-size="9">GET /policy/{orgId}</text>
+              <line x1="467" y1="204" x2="280" y2="204" stroke="#5499CA" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrow-brand-rev)"/>
+              <text x="373" y="198" text-anchor="middle" fill="#84B8DC" font-family="JetBrains Mono" font-size="9">200 OK: policy.bin + wrappedKey</text>
+              <rect x="350" y="212" width="184" height="22" rx="4" fill="rgba(84,153,202,0.05)" stroke="rgba(84,153,202,0.15)" stroke-width="1"/>
+              <text x="442" y="227" text-anchor="middle" fill="#3d6a8a" font-family="JetBrains Mono" font-size="9">no decryption, no computation</text>
+            </g>
+
+            <!-- Step 4: Edge decryption -->
+            <g id="seq-step4" class="seq-msg">
+              <rect x="160" y="260" width="240" height="22" rx="4" fill="rgba(16,185,129,0.1)" stroke="rgba(16,185,129,0.3)" stroke-width="1"/>
+              <text x="280" y="275" text-anchor="middle" fill="#10b981" font-family="JetBrains Mono" font-size="9">AES-KW-Unwrap → K_data (local)</text>
+              <rect x="160" y="290" width="240" height="22" rx="4" fill="rgba(16,185,129,0.1)" stroke="rgba(16,185,129,0.3)" stroke-width="1"/>
+              <text x="280" y="305" text-anchor="middle" fill="#10b981" font-family="JetBrains Mono" font-size="9">compileActiveSettings() → K_data.fill(0)</text>
+            </g>
+
+            <!-- Arrow markers -->
+            <defs>
+              <marker id="arrow-brand" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                <path d="M0,0 L0,6 L8,3 z" fill="#5499CA"/>
+              </marker>
+              <marker id="arrow-safe" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                <path d="M0,0 L0,6 L8,3 z" fill="#10b981"/>
+              </marker>
+              <marker id="arrow-brand-rev" markerWidth="8" markerHeight="8" refX="2" refY="3" orient="auto">
+                <path d="M8,0 L8,6 L0,3 z" fill="#5499CA"/>
+              </marker>
+            </defs>
+          </svg>
+        </div>
+
+        <!-- State panels (2/5) -->
+        <div class="xl:col-span-2 flex flex-col gap-4">
+
+          <!-- Current step description -->
+          <div class="card p-4">
+            <div class="text-xs font-mono text-brand/60 mb-2 uppercase tracking-wider">現在のステップ</div>
+            <div id="step-desc" class="text-sm text-blue-200/70 leading-relaxed">
+              「Step 1」を実行してシミュレーションを開始。
+            </div>
+          </div>
+
+          <!-- State grid -->
+          <div class="state-grid">
+            <!-- Extension Memory -->
+            <div class="state-card">
+              <div class="state-card-title">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/></svg>
+                EXT MEMORY
+              </div>
+              <div class="state-row">
+                <span class="state-row-k">K_master</span>
+                <span class="state-row-v null" id="state-ext-kmaster">null</span>
+              </div>
+              <div class="state-row">
+                <span class="state-row-k">K_data</span>
+                <span class="state-row-v null" id="state-ext-kdata">null</span>
+              </div>
+              <div class="state-row">
+                <span class="state-row-k">plaintext</span>
+                <span class="state-row-v null" id="state-ext-plain">null</span>
+              </div>
+            </div>
+
+            <!-- Extension Storage -->
+            <div class="state-card">
+              <div class="state-card-title">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                EXT STORAGE
+              </div>
+              <div class="state-row">
+                <span class="state-row-k">orgId</span>
+                <span class="state-row-v null" id="state-ext-orgid">null</span>
+              </div>
+              <div class="state-row">
+                <span class="state-row-k">managed</span>
+                <span class="state-row-v null" id="state-ext-managed">null</span>
+              </div>
+              <div class="state-row">
+                <span class="state-row-k">policy</span>
+                <span class="state-row-v null" id="state-ext-policy">null</span>
+              </div>
+            </div>
+
+            <!-- Server Memory -->
+            <div class="state-card">
+              <div class="state-card-title">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/></svg>
+                SERVER MEMORY
+              </div>
+              <div class="state-row">
+                <span class="state-row-k">K_master</span>
+                <span class="state-row-v null" id="state-srv-kmaster">null</span>
+              </div>
+              <div class="state-row">
+                <span class="state-row-k">plaintext</span>
+                <span class="state-row-v null" id="state-srv-plain">null</span>
+              </div>
+              <div class="state-row">
+                <span class="state-row-k">request</span>
+                <span class="state-row-v null" id="state-srv-req">null</span>
+              </div>
+            </div>
+
+            <!-- Server DB -->
+            <div class="state-card">
+              <div class="state-card-title">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+                SERVER DB
+              </div>
+              <div class="state-row">
+                <span class="state-row-k">policy.bin</span>
+                <span class="state-row-v null" id="state-srv-blob">null</span>
+              </div>
+              <div class="state-row">
+                <span class="state-row-k">wrappedKey</span>
+                <span class="state-row-v null" id="state-srv-wkey">null</span>
+              </div>
+              <div class="state-row">
+                <span class="state-row-k">K_master</span>
+                <span class="state-row-v null" id="state-srv-km">NOT PRESENT</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Log panel -->
+      <div class="card p-4">
+        <div class="text-xs font-mono text-brand/60 mb-3 uppercase tracking-wider flex items-center gap-2">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+          Live Event Log
+        </div>
+        <div class="log-panel" id="log-panel">
+          <div class="log-sep">— SIMULATOR READY — click Step 1 to begin —</div>
+        </div>
+      </div>
+
+    </div><!-- /panel-simulator -->
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="border-t border-brand/10 mt-16 px-6 py-8">
+    <div class="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div class="text-xs text-blue-200/30 font-mono">
+        Zenprax Browser Security — Zero-Knowledge Envelope Encryption Architecture<br/>
+        AES-256-GCM · AES-KW · WebCrypto API · MDM / storage.managed
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="pulse-dot"></span>
+        <span class="text-xs text-safe/60 font-mono">Server-Key-Zero Verified</span>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    // ======================================================
+    // Tab switching
+    // ======================================================
+    function switchTab(name) {
+      document.querySelectorAll('.tab-btn').forEach(function(btn, i) {
+        const panels = ['vision','matrix','envelope','simulator'];
+        btn.classList.toggle('active', panels[i] === name);
+      });
+      document.querySelectorAll('.section-panel').forEach(function(p) {
+        p.classList.remove('active');
+      });
+      const panel = document.getElementById('panel-' + name);
+      if (panel) panel.classList.add('active');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // ======================================================
+    // Simulator state
+    // ======================================================
+    const FAKE_HEX = {
+      kdata:      'a3f7c2e1b8d45690fc3a2e7d1b0c8f4a',
+      kmaster:    '4e2d8c1f93b607a5e4d92f0b6c3a1e87',
+      wrapped:    'b7e3f1a20c94d58e6b1f4c2d7a390e5f',
+      blob:       'c1f4a2e7b3d8059c4a2e8f1d7c0b3a6e',
+      orgId:      'org_zenprax_enterprise_001',
+    };
+
+    let currentStep = 0;
+
+    const stepDescs = [
+      '',
+      '管理者ブラウザ上で AES-256-GCM 用データキー（K_data）を WebCrypto CSRNG で生成。ポリシー平文を K_data で暗号化し、K_data を K_master でラップ（AES-KW）。生成された policy.bin と wrappedKey をクラウドにアップロード後、K_data を即時ゼロフィルで消去。',
+      'Intune / MDM が storage.managed を通じて拡張機能に組織ID と K_master をサイレント注入。管理者・ユーザーによる手動コピペは不要。K_master は拡張機能のマネージドストレージにのみ存在し、クラウドには一切送信されない。',
+      '拡張機能が /policy/{orgId} へ GET リクエスト。Zenprax Cloud は DB から policy.bin と wrappedKey をそのまま返すのみ。中身を解釈せず、再計算もせず、完全ステートレス。サーバーメモリに K_master・平文は存在しない。',
+      '拡張機能がローカルメモリ上で AES-KW-Unwrap（wrappedKey, K_master）→ K_data 復元。続いて AES-GCM-Decrypt（policy.bin, K_data）→ 平文取得。compileActiveSettings() 実行後、K_data を即時ゼロフィル。平文はメモリ上に保持されクラウドへは送信されない。',
+    ];
+
+    function ts() {
+      return new Date().toISOString().substring(11,23);
+    }
+
+    function addLog(key, val, valClass) {
+      const panel = document.getElementById('log-panel');
+      const line = document.createElement('div');
+      line.className = 'log-line log-new';
+      line.innerHTML =
+        '<span class="log-ts">' + ts() + '</span>' +
+        '<span class="log-key">' + escapeHtml(key) + '</span>' +
+        '<span class="log-val-' + valClass + '">' + escapeHtml(val) + '</span>';
+      panel.appendChild(line);
+      panel.scrollTop = panel.scrollHeight;
+    }
+
+    function addLogSep(label) {
+      const panel = document.getElementById('log-panel');
+      const sep = document.createElement('div');
+      sep.className = 'log-sep log-new';
+      sep.textContent = '─── ' + label + ' ───';
+      panel.appendChild(sep);
+      panel.scrollTop = panel.scrollHeight;
+    }
+
+    function escapeHtml(str) {
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function setState(id, val, cls) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.textContent = val;
+      el.className = 'state-row-v ' + (cls || '');
+      el.classList.add('flash');
+      setTimeout(function() { el.classList.remove('flash'); }, 600);
+    }
+
+    function showSeqStep(n) {
+      for (let i = 1; i <= 4; i++) {
+        const g = document.getElementById('seq-step' + i);
+        if (g) g.classList.toggle('visible', i <= n);
+      }
+    }
+
+    function updateProgress(step) {
+      document.getElementById('progress-label').textContent = step + ' / 4';
+      document.getElementById('progress-fill').style.width = (step / 4 * 100) + '%';
+    }
+
+    function runStep(n) {
+      if (n !== currentStep + 1) return;
+      currentStep = n;
+
+      // Update step buttons
+      for (let i = 1; i <= 4; i++) {
+        const btn = document.getElementById('step-btn-' + i);
+        if (!btn) continue;
+        if (i < n) { btn.classList.remove('active'); btn.disabled = true; }
+        else if (i === n) { btn.classList.add('active'); btn.disabled = false; }
+        else { btn.classList.remove('active'); btn.disabled = true; }
+      }
+      if (n < 4) {
+        const nextBtn = document.getElementById('step-btn-' + (n+1));
+        if (nextBtn) nextBtn.disabled = false;
+      }
+
+      document.getElementById('step-desc').textContent = stepDescs[n];
+      showSeqStep(n);
+      updateProgress(n);
+
+      if (n === 1) {
+        addLogSep('STEP 1 — Admin Encryption');
+        addLog('crypto.getRandomValues ', '→ K_data generated', 'hex');
+        addLog('K_data                 ', '0x' + FAKE_HEX.kdata, 'hex');
+        addLog('AES-GCM-256 encrypt    ', '→ policy.bin', 'ok');
+        addLog('policy.bin             ', '0x' + FAKE_HEX.blob + '…', 'hex');
+        addLog('AES-KW wrap K_data     ', '→ wrappedKey', 'ok');
+        addLog('wrappedKey             ', '0x' + FAKE_HEX.wrapped, 'hex');
+        addLog('cloud.upload           ', 'policy.bin + wrappedKey', 'str');
+        addLog('K_data.fill(0)         ', '→ ZEROIZED', 'null');
+
+        // Update state
+        setState('state-srv-blob', '0x' + FAKE_HEX.blob.substring(0,12) + '…', 'hex');
+        setState('state-srv-wkey', '0x' + FAKE_HEX.wrapped.substring(0,12) + '…', 'hex');
+        setState('state-srv-km', 'NOT PRESENT', 'null');
+        setState('state-ext-kdata', 'ZEROIZED', 'null');
+        setState('state-ext-kmaster', 'null', 'null');
+        setState('state-ext-plain', 'null', 'null');
+      }
+
+      if (n === 2) {
+        addLogSep('STEP 2 — MDM Provisioning');
+        addLog('MDM policy push        ', 'storage.managed inject', 'str');
+        addLog('orgId                  ', FAKE_HEX.orgId, 'str');
+        addLog('K_master               ', '0x' + FAKE_HEX.kmaster, 'hex');
+        addLog('storage.managed.set    ', '→ silent, no user action', 'ok');
+        addLog('cloud.send(K_master)   ', 'BLOCKED — never sent', 'null');
+
+        setState('state-ext-orgid', FAKE_HEX.orgId, 'active');
+        setState('state-ext-managed', 'K_master injected', 'active');
+        setState('state-ext-kmaster', '0x' + FAKE_HEX.kmaster.substring(0,12) + '…', 'active');
+        setState('state-srv-kmaster', 'NOT PRESENT', 'null');
+      }
+
+      if (n === 3) {
+        addLogSep('STEP 3 — Stateless Sync');
+        addLog('ext → cloud GET        ', '/policy/' + FAKE_HEX.orgId, 'str');
+        addLog('cloud DB lookup        ', 'policy.bin, wrappedKey', 'hex');
+        addLog('cloud.decrypt()        ', 'NOT CALLED — no capability', 'null');
+        addLog('cloud.compute()        ', 'NOT CALLED — stateless', 'null');
+        addLog('cloud → ext 200 OK     ', 'policy.bin + wrappedKey', 'ok');
+
+        setState('state-srv-req', 'GET /policy/…001', 'active');
+        setState('state-srv-plain', 'NOT PRESENT', 'null');
+        setState('state-ext-policy', 'policy.bin received', 'active');
+      }
+
+      if (n === 4) {
+        addLogSep('STEP 4 — Edge Dynamic Resolution');
+        addLog('AES-KW unwrap          ', 'wrappedKey → K_data', 'ok');
+        addLog('K_data (local mem)     ', '0x' + FAKE_HEX.kdata, 'hex');
+        addLog('AES-GCM-256 decrypt    ', 'policy.bin → plaintext', 'ok');
+        addLog('plaintext              ', '{ "blockList": [...], … }', 'str');
+        addLog('compileActiveSettings  ', '→ patches applied', 'ok');
+        addLog('K_data.fill(0)         ', '→ ZEROIZED — memory cleared', 'null');
+        addLog('TRUST_BOUNDARY         ', 'plaintext never left edge', 'ok');
+
+        setState('state-ext-kdata', 'ZEROIZED', 'null');
+        setState('state-ext-plain', 'applied (in-memory)', 'active');
+        setState('state-ext-policy', 'compiled & active', 'active');
+        setState('state-srv-plain', 'NOT PRESENT', 'null');
+        setState('state-srv-kmaster', 'NOT PRESENT', 'null');
+
+        // All done
+        document.getElementById('step-btn-4').classList.add('active');
+        addLogSep('SIMULATION COMPLETE — Server-Key-Zero Verified ✓');
+      }
+    }
+
+    function resetSimulator() {
+      currentStep = 0;
+      showSeqStep(0);
+      updateProgress(0);
+      document.getElementById('step-desc').textContent = '「Step 1」を実行してシミュレーションを開始。';
+
+      for (let i = 1; i <= 4; i++) {
+        const btn = document.getElementById('step-btn-' + i);
+        if (!btn) continue;
+        btn.classList.remove('active');
+        btn.disabled = (i !== 1);
+      }
+
+      // Clear state
+      const nullStates = [
+        ['state-ext-kmaster','null'],['state-ext-kdata','null'],['state-ext-plain','null'],
+        ['state-ext-orgid','null'],['state-ext-managed','null'],['state-ext-policy','null'],
+        ['state-srv-kmaster','null'],['state-srv-plain','null'],['state-srv-req','null'],
+        ['state-srv-blob','null'],['state-srv-wkey','null'],
+      ];
+      nullStates.forEach(function(pair) { setState(pair[0], pair[1], 'null'); });
+      setState('state-srv-km', 'NOT PRESENT', 'null');
+
+      const panel = document.getElementById('log-panel');
+      panel.innerHTML = '<div class="log-sep">— SIMULATOR RESET — click Step 1 to begin —</div>';
+    }
+
+    // Init Lucide icons
+    if (typeof lucide !== 'undefined') {
+      lucide.createIcons();
+    }
+  </script>
+</body>
+</html>
