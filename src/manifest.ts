@@ -36,6 +36,9 @@ export default defineManifest({
       // ここでのグローバル CSS 宣言は不要（ホストページを汚染しない）。
       run_at: 'document_start',
       all_frames: true,
+      // about:blank / data: の動的生成フレームにも親フレームの権限を引き継いで注入する。
+      // 悪意ある ClickFix 罠が about:blank iframe 内に仕込まれた場合でもガードが働く。
+      match_about_blank: true,
     },
     {
       // 画面共有監査: getDisplayMedia をフックするため main world に注入する。
@@ -45,6 +48,7 @@ export default defineManifest({
       js: ['src/content/mainWorld/getDisplayMediaPatch.ts'],
       run_at: 'document_start',
       all_frames: true,
+      match_about_blank: true,
       world: 'MAIN',
     },
   ],
