@@ -124,6 +124,23 @@ function reconcile(s: KibaSettings | null): void {
  * Bootstrap
  * ------------------------------------------------------------------ */
 
+/*
+ * Null-settings window: between script injection (document_start) and
+ * chrome.storage.local.get resolving (~1-2 event-loop ticks), `settings`
+ * is null. Safety analysis per plugin:
+ *  - pasteGuard: pasteGuardWanted(null) returns true (line 61), so the
+ *    guard starts immediately. Inside the handler, null settings leave
+ *    antiClickFixEnabled treated as enabled — restrictive/safe direction.
+ *  - fileGater: always started. With null settings, isRestrictedContext(null)
+ *    returns false, so uploads are not blocked — a brief permissive window
+ *    on cold start only, not on navigation. Accepted as-is.
+ *  - ssoFiller / screenShare: skipped until s?.ssoEnabled /
+ *    s?.screenShareAuditEnabled is truthy. No gap risk.
+ *
+ * An event queue was considered and rejected: the risk window is
+ * sub-millisecond, plugins already fall back safely, and a queue adds
+ * buffer-management complexity with no meaningful security gain.
+ */
 void getSettings().then((s) => {
   settings = s;
   reconcile(settings);
