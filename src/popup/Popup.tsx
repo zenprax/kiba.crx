@@ -57,17 +57,17 @@ export function Popup() {
 
   const t = settings.language === 'en' ? EN : JA;
 
-  const tabs = useMemo<{ id: TabId; label: string }[]>(() => {
-    const all: { id: TabId; label: string }[] = [
+  const tabs = useMemo<{ id: TabId; label: string }[]>(
+    () => [
       { id: 'dashboard', label: t.tabs.dashboard },
       { id: 'filter', label: t.tabs.filter },
       { id: 'anti-clickfix', label: t.tabs.antiClickFix },
       { id: 'sso', label: t.tabs.sso },
       { id: 'audit', label: t.tabs.audit },
       { id: 'settings', label: t.tabs.settings },
-    ];
-    return all.filter((tab) => !settings.hiddenTabs.includes(tab.id));
-  }, [settings.hiddenTabs, t]);
+    ],
+    [t],
+  );
 
   useEffect(() => {
     if (!tabs.some((tab) => tab.id === activeTab)) setActiveTab('dashboard');
