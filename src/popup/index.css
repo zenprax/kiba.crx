@@ -10,20 +10,21 @@ body {
 
 #root {
   width: 420px;
+  scrollbar-gutter: stable;
 }
 
 /* ------------------------------------------------------------------ *
  * Hero header: ambient light + danger/paused states
  * ------------------------------------------------------------------ */
 .header-wrap {
-  background: linear-gradient(160deg, #112236 0%, #0d1a2b 65%);
+  background: linear-gradient(160deg, var(--zp-bg-surface) 0%, var(--zp-bg-base) 65%);
 }
 
 .header-ambient {
   position: absolute;
   inset: 0;
   background: radial-gradient(ellipse 300px 130px at 50% -30px,
-    rgba(74,222,128,0.09) 0%, transparent 70%);
+    var(--zp-status-pulse-safe) 0%, transparent 70%);
   pointer-events: none;
   transition: background 0.8s ease;
   z-index: 0;
@@ -31,43 +32,45 @@ body {
 
 .header-paused .header-ambient {
   background: radial-gradient(ellipse 300px 130px at 50% -30px,
-    rgba(252,211,77,0.08) 0%, transparent 70%);
+    var(--zp-status-pulse-warn) 0%, transparent 70%);
 }
 
 .header-alert .header-ambient {
   background: radial-gradient(ellipse 300px 130px at 50% -30px,
-    rgba(253,164,175,0.12) 0%, transparent 70%);
+    var(--zp-status-pulse-crit) 0%, transparent 70%);
 }
 
 /* ------------------------------------------------------------------ *
- * Expand/collapse button — tab shape, absolute bottom-center
+ * Expand/collapse button — tab shape, centered between header and body
  * ------------------------------------------------------------------ */
+.expand-btn-wrap {
+  display: flex;
+  justify-content: center;
+  /* negative margin pulls it flush against the header border */
+  margin-top: -1px;
+}
+
 .expand-btn {
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 14px 5px;
-  background: rgba(17,34,54,0.7);
-  border: 1px solid #1B3A5C;
-  border-bottom: none;
-  border-radius: 8px 8px 0 0;
+  padding: 3px 14px 4px;
+  background: var(--zp-bg-surface);
+  border: 1px solid var(--zp-border-default);
+  border-top: none;
+  border-radius: 0 0 8px 8px;
   font-size: 10px;
   font-weight: 600;
-  color: #5499CA;
+  color: var(--zp-brand-primary);
   cursor: pointer;
-  z-index: 2;
   user-select: none;
   transition: color 0.15s, background 0.15s;
   white-space: nowrap;
 }
 
 .expand-btn:hover {
-  color: #BDD8ED;
-  background: rgba(17,34,54,0.95);
+  color: var(--zp-text-secondary);
+  background: var(--zp-interactive-hover);
 }
 
 .expand-chevron {
@@ -96,7 +99,7 @@ body {
   background: none;
   border: none;
   border-bottom: 2px solid transparent;
-  color: #5499CA;
+  color: var(--zp-brand-primary);
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -105,7 +108,7 @@ body {
 }
 
 .tab-btn:not(.tab-active):hover {
-  color: #BDD8ED;
+  color: var(--zp-brand-hover);
 }
 
 .tab-btn:not(.tab-active):hover::after {
@@ -114,22 +117,22 @@ body {
   bottom: calc(100% + 6px);
   left: 50%;
   transform: translateX(-50%);
-  background: #1B3A5C;
-  color: #F2F7FB;
+  background: var(--zp-border-default);
+  color: var(--zp-surface-chrome-text);
   font-size: 11px;
   font-weight: 500;
   padding: 4px 8px;
   border-radius: 6px;
   white-space: nowrap;
-  border: 1px solid #1B3A5C;
+  border: 1px solid var(--zp-border-default);
   pointer-events: none;
   z-index: 50;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  box-shadow: var(--zp-shadow-lg, 0 4px 12px rgba(0,0,0,0.5));
 }
 
 .tab-btn.tab-active {
-  color: #84B8DC;
-  border-bottom-color: #84B8DC;
+  color: var(--zp-brand-hover);
+  border-bottom-color: var(--zp-brand-hover);
 }
 
 .tab-label {
@@ -245,11 +248,11 @@ body {
   flex-shrink: 0;
 }
 
-.feed-tag-paste   { background: rgba(127,29,29,0.20); color: #FDA4AF; }
-.feed-tag-sso     { background: rgba(30,64,175,0.20); color: #93C5FD; }
-.feed-tag-bypass  { background: rgba(245,158,11,0.14); color: #FCD34D; }
-.feed-tag-dl      { background: rgba(84,153,202,0.14); color: #84B8DC; }
-.feed-tag-default { background: rgba(31,74,115,1); color: #5499CA; }
+.feed-tag-paste   { background: var(--zp-severity-critical-bg);  color: var(--zp-severity-critical-text); }
+.feed-tag-sso     { background: var(--zp-status-info-bg);         color: var(--zp-status-info-text); }
+.feed-tag-bypass  { background: var(--zp-status-warn-bg);         color: var(--zp-status-warn-text); }
+.feed-tag-dl      { background: color-mix(in srgb, var(--zp-brand-primary) 14%, transparent); color: var(--zp-brand-hover); }
+.feed-tag-default { background: var(--zp-interactive-hover);      color: var(--zp-brand-primary); }
 
 /* ------------------------------------------------------------------ *
  * Keyboard hint bar
@@ -260,8 +263,8 @@ body {
   justify-content: center;
   gap: 12px;
   padding: 6px 14px 8px;
-  background: rgba(17,34,54,0.5);
-  border-top: 1px solid rgba(27,58,92,0.5);
+  background: color-mix(in srgb, var(--zp-bg-surface) 50%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--zp-border-default) 50%, transparent);
   flex-wrap: wrap;
 }
 
@@ -270,7 +273,7 @@ body {
   align-items: center;
   gap: 4px;
   font-size: 10px;
-  color: #5499CA;
+  color: var(--zp-brand-primary);
 }
 
 .kb-key {
@@ -280,11 +283,11 @@ body {
   width: 18px;
   height: 16px;
   border-radius: 3px;
-  border: 1px solid rgba(84,153,202,0.3);
-  background: rgba(84,153,202,0.08);
+  border: 1px solid color-mix(in srgb, var(--zp-brand-primary) 30%, transparent);
+  background: color-mix(in srgb, var(--zp-brand-primary) 8%, transparent);
   font-size: 9px;
   font-weight: 700;
-  color: #5499CA;
+  color: var(--zp-brand-primary);
   font-family: ui-monospace, monospace;
   line-height: 1;
 }

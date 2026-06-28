@@ -175,7 +175,7 @@ export function Popup() {
     <div className="min-h-[480px] bg-bg-base text-text-primary font-sans">
       {/* Status header */}
       <header
-        className={`header-wrap px-zp-5 pt-zp-4 border-b border-border-default relative overflow-hidden cursor-default ${
+        className={`header-wrap px-zp-5 pt-zp-4 border-b border-border-default relative cursor-default ${
           dangerFlash ? 'header-alert' : settings.enabled ? '' : 'header-paused'
         }`}
       >
@@ -267,7 +267,10 @@ export function Popup() {
           </Tooltip.Root>
         )}
 
-        {/* Hero collapse toggle — absolute bottom-center, tab shape */}
+      </header>
+
+      {/* Hero collapse toggle — sits between header and body, centered */}
+      <div className="expand-btn-wrap">
         <button
           onClick={() => setHeroOpen((o) => !o)}
           aria-label={heroOpen ? 'コンテンツを閉じる' : 'コンテンツを開く'}
@@ -276,7 +279,7 @@ export function Popup() {
           <span>{heroOpen ? '閉じる' : '開く'}</span>
           <span className={`expand-chevron ${heroOpen ? 'expand-chevron-open' : ''}`}>▴</span>
         </button>
-      </header>
+      </div>
 
       {/* Collapsible body */}
       <div className={`hero-body ${heroOpen ? 'hero-body-open' : 'hero-body-closed'}`}>

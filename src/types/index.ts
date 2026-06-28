@@ -327,6 +327,8 @@ export interface KibaSettings {
    * 共有自体はブロックしない。default false。
    */
   screenShareAuditEnabled: boolean;
+  /** UI color theme. Defaults to 'dark'. */
+  theme: 'dark' | 'light';
 }
 
 /** Default settings applied on install and used as a fallback when reading storage. */
@@ -360,6 +362,7 @@ export const DEFAULT_SETTINGS: KibaSettings = {
   downloadGaterEnabled: false,
   downloadAllowlist: [],
   screenShareAuditEnabled: false,
+  theme: 'dark',
 };
 
 /** Maximum number of audit-log entries retained locally. */

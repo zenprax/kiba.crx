@@ -71,6 +71,7 @@ export const JA: Translations = {
     enableDesc: '画面共有が要求された際に監査ログへ記録します。',
   },
   settings: {
+    themeTitle: 'カラーテーマ',
     langTitle: '表示言語',
     cloudSync: 'クラウド同期設定',
     cloudSyncDesc: 'ボタン1つで ZENPRAX Cloud に安全に接続し、ポリシーと復号鍵を自動同期します。',
@@ -233,6 +234,7 @@ export type Translations = {
     managedNote: string;
   };
   settings: {
+    themeTitle: string;
     langTitle: string;
     cloudSync: string;
     cloudSyncDesc: string;
@@ -328,6 +330,7 @@ export const EN: Translations = {
     enableDesc: 'Log to the audit trail when a screen share is requested.',
   },
   settings: {
+    themeTitle: 'Color Theme',
     langTitle: 'Display Language',
     cloudSync: 'Cloud Sync Settings',
     cloudSyncDesc:
