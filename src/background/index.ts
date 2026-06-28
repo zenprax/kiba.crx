@@ -25,7 +25,7 @@ import {
 } from './credentialBroker';
 import { initBypassManager, requestBypass } from './bypassManager';
 import { initDownloadGater } from './downloadGater';
-import { buildDomainRules } from './domainRules';
+import { buildDomainRules, DNR_DYNAMIC_RULE_LIMIT } from './domainRules';
 import { CONSOLE_CONFIG } from '../lib/consoleClient';
 
 /** content → background: OS 通知の依頼。 */
@@ -153,7 +153,21 @@ async function applyDynamicDomainRules(
     chrome.declarativeNetRequest.ResourceType.IMAGE,
   ];
 
-  const addRules = buildDomainRules(blockDomains, allowlist, resourceTypes);
+  // allowlist を優先確保し、残り枠を blockDomains に割り当てて上限を超えないようにする。
+  let trimmedBlock = blockDomains;
+  let trimmedAllow = allowlist;
+  const total = blockDomains.length + allowlist.length;
+  if (total > DNR_DYNAMIC_RULE_LIMIT) {
+    const allowSlots = Math.min(allowlist.length, DNR_DYNAMIC_RULE_LIMIT);
+    const blockSlots = DNR_DYNAMIC_RULE_LIMIT - allowSlots;
+    trimmedAllow = allowlist.slice(0, allowSlots);
+    trimmedBlock = blockDomains.slice(0, blockSlots);
+    console.warn(
+      `[kiba.crx] DNR rule limit: trimmed ${total - DNR_DYNAMIC_RULE_LIMIT} rules (block: ${blockDomains.length}→${trimmedBlock.length}, allow: ${allowlist.length}→${trimmedAllow.length})`,
+    );
+  }
+
+  const addRules = buildDomainRules(trimmedBlock, trimmedAllow, resourceTypes);
 
   try {
     await chrome.declarativeNetRequest.updateDynamicRules({ removeRuleIds, addRules });
