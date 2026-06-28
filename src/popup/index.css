@@ -11,3 +11,142 @@ body {
 #root {
   width: 420px;
 }
+
+/* ------------------------------------------------------------------ *
+ * Tab navigation: icon-fixed + label expand animation
+ * ------------------------------------------------------------------ */
+.tab-btn {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.tab-label {
+  display: inline-block;
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition:
+    max-width 0.22s ease,
+    opacity 0.18s ease,
+    margin-left 0.22s ease;
+  margin-left: 0;
+}
+
+.tab-btn.tab-active .tab-label {
+  max-width: 120px;
+  opacity: 1;
+  margin-left: 0.35rem;
+}
+
+/* ------------------------------------------------------------------ *
+ * Shield pulse animation (Phase 2-A)
+ * ------------------------------------------------------------------ */
+@keyframes shield-pulse {
+  0% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.55); opacity: 0; }
+  100% { transform: scale(1.55); opacity: 0; }
+}
+
+@keyframes shield-pulse-2 {
+  0% { transform: scale(1); opacity: 0.35; }
+  70% { transform: scale(1.85); opacity: 0; }
+  100% { transform: scale(1.85); opacity: 0; }
+}
+
+.shield-ring-1 {
+  animation: shield-pulse 2s ease-out infinite;
+}
+
+.shield-ring-2 {
+  animation: shield-pulse-2 2s ease-out 0.5s infinite;
+}
+
+.shield-paused .shield-ring-1,
+.shield-paused .shield-ring-2 {
+  animation-play-state: paused;
+  opacity: 0;
+}
+
+/* ------------------------------------------------------------------ *
+ * Blocked-count fly-up animation (Phase 2-D)
+ * ------------------------------------------------------------------ */
+@keyframes flyup {
+  0%   { opacity: 1; transform: translateY(0); }
+  80%  { opacity: 0.7; transform: translateY(-18px); }
+  100% { opacity: 0; transform: translateY(-24px); }
+}
+
+.flyup-chip {
+  animation: flyup 0.9s ease-out forwards;
+  pointer-events: none;
+  position: absolute;
+}
+
+/* ------------------------------------------------------------------ *
+ * Live dot blink (Phase 2-B feed bar)
+ * ------------------------------------------------------------------ */
+@keyframes live-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.2; }
+}
+
+.live-dot {
+  animation: live-blink 1.4s ease-in-out infinite;
+}
+
+/* ------------------------------------------------------------------ *
+ * Hero collapse transition (Phase 2-C)
+ * ------------------------------------------------------------------ */
+.hero-body {
+  overflow: hidden;
+  transition: max-height 0.28s ease, opacity 0.22s ease;
+}
+
+.hero-body-open {
+  max-height: 600px;
+  opacity: 1;
+}
+
+.hero-body-closed {
+  max-height: 0;
+  opacity: 0;
+}
+
+/* ------------------------------------------------------------------ *
+ * Ambient danger flash (Phase 2-E)
+ * ------------------------------------------------------------------ */
+.header-danger {
+  background-image: linear-gradient(to bottom right, #3d1a1a, #2a1414) !important;
+  transition: background-image 0s;
+}
+
+/* ------------------------------------------------------------------ *
+ * prefers-reduced-motion
+ * ------------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  .tab-label {
+    transition: none;
+  }
+
+  .shield-ring-1,
+  .shield-ring-2 {
+    animation: none;
+    opacity: 0;
+  }
+
+  .flyup-chip {
+    animation: none;
+    display: none;
+  }
+
+  .live-dot {
+    animation: none;
+  }
+
+  .hero-body {
+    transition: none;
+  }
+}
