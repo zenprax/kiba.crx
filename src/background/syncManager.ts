@@ -12,7 +12,7 @@
 
 import { base64ToBytes, decryptEnvelope, type EncryptedEnvelope } from '../lib/crypto';
 import { CONSOLE_CONFIG, resolveKey } from '../lib/consoleClient';
-import { parsePolicyPayload, type PolicyPatch } from '../lib/policySchema';
+import { parsePolicyPayload } from '../lib/policySchema';
 import { compileActiveSettings, decodeJwtPayload, decryptPolicyBlob } from '../lib/policyFilter';
 import { addAuditLog, flushAuditQueue, getSettings, setSettings } from '../lib/storage';
 import type { KibaSettings, KibaSettingsPatch, PolicyClaims } from '../types';
@@ -35,7 +35,7 @@ const POLICY_BASE_URL = 'https://kiba-api.zenprax.com/v1/users';
  * patch, so it is merged with the existing value before saving (setSettings does
  * a shallow merge, which would otherwise replace `auth` wholesale).
  */
-async function applyPolicyPatch(patch: PolicyPatch | KibaSettingsPatch): Promise<void> {
+async function applyPolicyPatch(patch: KibaSettingsPatch): Promise<void> {
   const { auth: authPatch, ...rest } = patch;
   const update: Partial<KibaSettings> = { ...rest };
 

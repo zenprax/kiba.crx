@@ -15,7 +15,7 @@
  */
 
 import { z } from 'zod';
-import type { KibaAuthState, KibaSettings, TenantRuleDef, TenantWhitelistEntry } from '../types';
+import type { KibaSettingsPatch, TenantRuleDef, TenantWhitelistEntry } from '../types';
 
 /**
  * Upper bound for an untrusted RegExp source string (first-line ReDoS
@@ -29,15 +29,6 @@ const MAX_CUSTOM_PATTERNS = 64;
 const MAX_TENANT_RULES = 128;
 
 const patternSourceSchema = z.string().min(1).max(MAX_PATTERN_LEN);
-
-/**
- * Policy patch. A shallow subset of KibaSettings, but `auth` allows partial
- * updates so it is expressed as Partial<KibaAuthState> (the caller merges it
- * into the existing auth).
- */
-export type PolicyPatch = Partial<Omit<KibaSettings, 'auth'>> & {
-  auth?: Partial<KibaAuthState>;
-};
 
 /* ------------------------------------------------------------------ *
  * Zod schema definitions
@@ -148,7 +139,7 @@ function pruneUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
  * fields are adopted only when their type matches; non-matching fields are
  * silently discarded (fail-safe).
  */
-export function parsePolicyPayload(raw: unknown): PolicyPatch | null {
+export function parsePolicyPayload(raw: unknown): KibaSettingsPatch | null {
   // Parse loosely overall: null if the top level is a non-object, otherwise
   // safeParse each field individually and adopt only those that pass. This
   // avoids discarding the whole payload over one field's type mismatch while
@@ -156,14 +147,14 @@ export function parsePolicyPayload(raw: unknown): PolicyPatch | null {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return null;
 
   const source = raw as Record<string, unknown>;
-  const patch: PolicyPatch = {};
+  const patch: KibaSettingsPatch = {};
 
   // Validate each field against its schema and adopt only type-matching ones.
   for (const [key, schema] of Object.entries(fieldSchemas)) {
     if (!(key in source)) continue;
     const result = schema.safeParse(source[key]);
     if (result.success) {
-      // key is a fieldSchemas key, so it matches the corresponding PolicyPatch property.
+      // key is a fieldSchemas key, so it matches the corresponding KibaSettingsPatch property.
       (patch as Record<string, unknown>)[key] = result.data;
     }
   }
