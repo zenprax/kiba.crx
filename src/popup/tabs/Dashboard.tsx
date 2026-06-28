@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import {
   MousePointerClick,
   EyeOff,
@@ -11,12 +11,13 @@ import {
   Globe,
   Shield,
   ShieldOff,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
-import type { KibaSettings } from '../../types';
+import type { KibaSettings, TabId } from '../../types';
 import { Card, StatCard, Toggle, TenantList } from '../Popup';
 import { useLang } from '../i18n';
 
-/** URL 文字列をホスト名に正規化する（FilterTab の入力正規化と整合）。 */
 function hostnameOf(url: string): string | null {
   try {
     return new URL(url).hostname.toLowerCase();
@@ -38,6 +39,7 @@ export interface DashboardProps {
   onToggleScreenShareAudit: () => void;
   onGrantBypass: () => void;
   onUpdateSettings: (patch: Partial<KibaSettings>) => Promise<void>;
+  onNavigate: (tab: TabId) => void;
 }
 
 export function Dashboard({
@@ -53,9 +55,11 @@ export function Dashboard({
   onToggleScreenShareAudit,
   onGrantBypass,
   onUpdateSettings,
+  onNavigate,
 }: DashboardProps) {
   const t = useLang();
   const locked = loading || isManaged;
+  const [secondaryOpen, setSecondaryOpen] = useState(false);
 
   return (
     <div className="space-y-zp-3">
@@ -69,10 +73,10 @@ export function Dashboard({
         />
       </div>
 
-      {/* このサイトをワンクリックで許可/ブロック */}
-      <QuickActionsCard settings={settings} isManaged={isManaged} onUpdateSettings={onUpdateSettings} />
+      {/* Site segment control */}
+      <SiteSegmentCard settings={settings} isManaged={isManaged} onUpdateSettings={onUpdateSettings} />
 
-      {/* Anti-ClickFix toggle */}
+      {/* Primary features (always visible) */}
       <Card>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-zp-2">
@@ -82,16 +86,10 @@ export function Dashboard({
               <div className="text-zp-md text-text-muted">{t.dashboard.antiClickFixDesc}</div>
             </div>
           </div>
-          <Toggle
-            checked={settings.antiClickFixEnabled}
-            disabled={locked}
-            onChange={onToggleAntiClickFix}
-            label="Anti-ClickFix"
-          />
+          <Toggle checked={settings.antiClickFixEnabled} disabled={locked} onChange={onToggleAntiClickFix} label="Anti-ClickFix" />
         </div>
       </Card>
 
-      {/* Paste masking toggle */}
       <Card>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-zp-2">
@@ -101,35 +99,10 @@ export function Dashboard({
               <div className="text-zp-md text-text-muted">{t.dashboard.maskingDesc}</div>
             </div>
           </div>
-          <Toggle
-            checked={settings.maskEnabled}
-            disabled={locked}
-            onChange={onToggleMask}
-            label="Confidential Masking"
-          />
+          <Toggle checked={settings.maskEnabled} disabled={locked} onChange={onToggleMask} label="Confidential Masking" />
         </div>
       </Card>
 
-      {/* Pseudo-SSO toggle */}
-      <Card>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-zp-2">
-            <KeyRound className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden />
-            <div>
-              <div className="text-zp-base font-semibold">{t.dashboard.sso}</div>
-              <div className="text-zp-md text-text-muted">{t.dashboard.ssoDesc}</div>
-            </div>
-          </div>
-          <Toggle
-            checked={settings.ssoEnabled}
-            disabled={locked}
-            onChange={onToggleSso}
-            label="Pseudo-SSO Autofill"
-          />
-        </div>
-      </Card>
-
-      {/* Threat Intelligence Filter toggle */}
       <Card>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-zp-2">
@@ -139,52 +112,64 @@ export function Dashboard({
               <div className="text-zp-md text-text-muted">{t.dashboard.networkFilterDesc}</div>
             </div>
           </div>
-          <Toggle
-            checked={settings.networkFilterEnabled}
-            disabled={locked}
-            onChange={onToggleNetworkFilter}
-            label="Threat Intelligence Filter"
-          />
+          <Toggle checked={settings.networkFilterEnabled} disabled={locked} onChange={onToggleNetworkFilter} label="Threat Intelligence Filter" />
         </div>
       </Card>
 
-      {/* Download Gater toggle */}
-      <Card>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-zp-2">
-            <Download className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden />
-            <div>
-              <div className="text-zp-base font-semibold">{t.download.enable}</div>
-              <div className="text-zp-md text-text-muted">{t.download.enableDesc}</div>
-            </div>
-          </div>
-          <Toggle
-            checked={settings.downloadGaterEnabled}
-            disabled={locked}
-            onChange={onToggleDownloadGater}
-            label="Download Gater"
-          />
-        </div>
-      </Card>
+      {/* Secondary features (collapsible) */}
+      <button
+        onClick={() => setSecondaryOpen((o) => !o)}
+        className="flex w-full items-center justify-between rounded-zp-lg border border-border-default bg-bg-surface/40 px-zp-3 py-zp-2 text-zp-md font-semibold text-text-muted hover:text-text-secondary transition"
+      >
+        <span>その他の保護機能</span>
+        {secondaryOpen
+          ? <ChevronUp className="h-4 w-4" aria-hidden />
+          : <ChevronDown className="h-4 w-4" aria-hidden />
+        }
+      </button>
 
-      {/* Screen-share audit toggle */}
-      <Card>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-zp-2">
-            <MonitorPlay className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden />
-            <div>
-              <div className="text-zp-base font-semibold">{t.screenShare.enable}</div>
-              <div className="text-zp-md text-text-muted">{t.screenShare.enableDesc}</div>
+      {secondaryOpen && (
+        <div className="space-y-zp-3">
+          <Card>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-zp-2">
+                <KeyRound className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden />
+                <div>
+                  <div className="text-zp-base font-semibold">{t.dashboard.sso}</div>
+                  <div className="text-zp-md text-text-muted">{t.dashboard.ssoDesc}</div>
+                </div>
+              </div>
+              <Toggle checked={settings.ssoEnabled} disabled={locked} onChange={onToggleSso} label="Pseudo-SSO Autofill" />
             </div>
-          </div>
-          <Toggle
-            checked={settings.screenShareAuditEnabled}
-            disabled={locked}
-            onChange={onToggleScreenShareAudit}
-            label="Screen Share Audit"
-          />
+          </Card>
+
+          <Card>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-zp-2">
+                <Download className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden />
+                <div>
+                  <div className="text-zp-base font-semibold">{t.download.enable}</div>
+                  <div className="text-zp-md text-text-muted">{t.download.enableDesc}</div>
+                </div>
+              </div>
+              <Toggle checked={settings.downloadGaterEnabled} disabled={locked} onChange={onToggleDownloadGater} label="Download Gater" />
+            </div>
+          </Card>
+
+          <Card>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-zp-2">
+                <MonitorPlay className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden />
+                <div>
+                  <div className="text-zp-base font-semibold">{t.screenShare.enable}</div>
+                  <div className="text-zp-md text-text-muted">{t.screenShare.enableDesc}</div>
+                </div>
+              </div>
+              <Toggle checked={settings.screenShareAuditEnabled} disabled={locked} onChange={onToggleScreenShareAudit} label="Screen Share Audit" />
+            </div>
+          </Card>
         </div>
-      </Card>
+      )}
 
       {/* Trusted tenant whitelist (read-only) */}
       <Card>
@@ -197,7 +182,11 @@ export function Dashboard({
             {settings.tenantWhitelist.length} {t.dashboard.entries}
           </span>
         </div>
-        <TenantList entries={settings.tenantWhitelist} emptyLabel={t.dashboard.noTenants} />
+        <TenantList
+          entries={settings.tenantWhitelist}
+          emptyLabel={t.dashboard.noTenants}
+          onNavigateToSettings={() => onNavigate('settings')}
+        />
       </Card>
 
       {/* One-Time Bypass control */}
@@ -207,23 +196,47 @@ export function Dashboard({
           <div className="text-zp-base font-semibold">{t.dashboard.bypassTitle}</div>
         </div>
         <div className="mt-zp-1 text-zp-md text-text-muted">{t.dashboard.bypassDesc}</div>
-        <button
-          onClick={onGrantBypass}
-          disabled={settings.oneTimeBypass !== null || isManaged}
-          className="mt-zp-3 w-full rounded-zp-lg bg-brand-hover px-zp-3 py-zp-2 text-zp-base font-semibold text-text-on-brand transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {settings.oneTimeBypass ? t.dashboard.bypassArmed : t.dashboard.bypassRequest}
-        </button>
+        {settings.oneTimeBypass && (
+          <div className="mt-zp-2 rounded-zp-lg border border-status-warn-text/30 bg-status-warn-bg/20 px-zp-2 py-zp-2 text-zp-sm space-y-zp-1">
+            <div className="flex items-center justify-between gap-zp-2">
+              <span className="text-text-muted">{t.dashboard.bypassDomain}</span>
+              <span className="font-mono text-text-primary">{settings.oneTimeBypass.domain}</span>
+            </div>
+            <div className="flex items-center justify-between gap-zp-2">
+              <span className="text-text-muted">{t.dashboard.bypassArmed}</span>
+              <span className="text-status-warn-text font-semibold">
+                {t.dashboard.bypassExpiry(Math.max(0, Math.round((settings.oneTimeBypass.expiresAt - Date.now()) / 60000)))}
+              </span>
+            </div>
+          </div>
+        )}
+        <div className="mt-zp-3 flex gap-zp-2">
+          <button
+            onClick={onGrantBypass}
+            disabled={settings.oneTimeBypass !== null || isManaged}
+            className="flex-1 rounded-zp-lg bg-brand-hover px-zp-3 py-zp-2 text-zp-base font-semibold text-text-on-brand transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {settings.oneTimeBypass ? t.dashboard.bypassArmed : t.dashboard.bypassRequest}
+          </button>
+          {settings.oneTimeBypass && (
+            <button
+              onClick={() => void onUpdateSettings({ oneTimeBypass: null })}
+              disabled={isManaged}
+              className="rounded-zp-lg border border-btn-danger-bg px-zp-3 py-zp-2 text-zp-base font-semibold text-btn-danger-bg transition hover:bg-btn-danger-bg hover:text-text-primary disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {t.dashboard.bypassRevoke}
+            </button>
+          )}
+        </div>
       </Card>
     </div>
   );
 }
 
-/**
- * 現在アクティブなタブのホストを取得し、ワンクリックで block/allow リストに
- * 追加するカード。chrome.tabs.query は grantBypass と同じパターンで使う。
- */
-function QuickActionsCard({
+/** 3状態セグメントコントロール: default / allow / block */
+type SiteState = 'default' | 'allow' | 'block';
+
+function SiteSegmentCard({
   settings,
   isManaged,
   onUpdateSettings,
@@ -242,18 +255,33 @@ function QuickActionsCard({
       .catch(() => setHost(null));
   }, []);
 
-  const inBlock = host !== null && settings.userBlockDomains.includes(host);
-  const inAllow = host !== null && settings.filterAllowlist.includes(host);
+  const siteState: SiteState =
+    host !== null && settings.userBlockDomains.includes(host)
+      ? 'block'
+      : host !== null && settings.filterAllowlist.includes(host)
+      ? 'allow'
+      : 'default';
 
-  async function addToBlock() {
-    if (!host || inBlock) return;
-    await onUpdateSettings({ userBlockDomains: [...settings.userBlockDomains, host] });
+  async function applyState(next: SiteState) {
+    if (!host || isManaged) return;
+    const blockList = settings.userBlockDomains.filter((d) => d !== host);
+    const allowList = settings.filterAllowlist.filter((d) => d !== host);
+    if (next === 'block') blockList.push(host);
+    if (next === 'allow') allowList.push(host);
+    await onUpdateSettings({ userBlockDomains: blockList, filterAllowlist: allowList });
   }
 
-  async function addToAllow() {
-    if (!host || inAllow) return;
-    await onUpdateSettings({ filterAllowlist: [...settings.filterAllowlist, host] });
-  }
+  const stateDesc: Record<SiteState, string> = {
+    default: 'システム既定のルールを適用中',
+    allow:   'このサイトはすべてのブロックルールから除外されています',
+    block:   'このサイトへのリクエストをブロックしています',
+  };
+
+  const segments: { id: SiteState; label: string; icon: ReactNode }[] = [
+    { id: 'default', label: 'デフォルト', icon: <Globe className="h-3.5 w-3.5" aria-hidden /> },
+    { id: 'allow',   label: '許可中',     icon: <Shield className="h-3.5 w-3.5" aria-hidden /> },
+    { id: 'block',   label: 'ブロック',   icon: <ShieldOff className="h-3.5 w-3.5" aria-hidden /> },
+  ];
 
   return (
     <Card>
@@ -261,32 +289,38 @@ function QuickActionsCard({
         <Globe className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden />
         <div className="text-zp-base font-semibold">{t.dashboard.quickActions.title}</div>
       </div>
-      <div className="mt-zp-1 text-zp-md text-text-muted">{t.dashboard.quickActions.desc}</div>
 
       {host ? (
         <>
-          <div className="mt-zp-2 rounded-zp-lg bg-bg-base/60 px-zp-3 py-zp-2 text-zp-md">
+          <div className="mt-zp-1 rounded-zp-lg bg-bg-base/60 px-zp-2 py-zp-1 text-zp-md">
             <span className="text-text-muted">{t.dashboard.quickActions.currentSite}: </span>
             <span className="font-mono text-text-primary">{host}</span>
           </div>
-          <div className="mt-zp-2 grid grid-cols-2 gap-zp-2">
-            <button
-              onClick={() => void addToBlock()}
-              disabled={isManaged || inBlock}
-              className="flex items-center justify-center gap-zp-1 rounded-zp-lg bg-btn-danger-bg px-zp-3 py-zp-2 text-zp-md font-semibold text-text-primary transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <ShieldOff className="h-3.5 w-3.5" aria-hidden />
-              {t.dashboard.quickActions.block}
-            </button>
-            <button
-              onClick={() => void addToAllow()}
-              disabled={isManaged || inAllow}
-              className="flex items-center justify-center gap-zp-1 rounded-zp-lg bg-bg-base/60 px-zp-3 py-zp-2 text-zp-md font-semibold text-text-primary transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <Shield className="h-3.5 w-3.5" aria-hidden />
-              {t.dashboard.quickActions.allow}
-            </button>
+
+          <div className="mt-zp-2 flex rounded-zp-lg border border-border-default overflow-hidden">
+            {segments.map((seg) => (
+              <button
+                key={seg.id}
+                onClick={() => void applyState(seg.id)}
+                disabled={isManaged}
+                className={`flex flex-1 items-center justify-center gap-zp-1 py-zp-2 text-zp-sm font-semibold transition
+                  ${siteState === seg.id
+                    ? seg.id === 'block'
+                      ? 'bg-interactive-segment-block-bg text-interactive-segment-block-text'
+                      : seg.id === 'allow'
+                      ? 'bg-interactive-segment-allow-bg text-interactive-segment-allow-text'
+                      : 'bg-interactive-segment-default-bg text-interactive-segment-default-text'
+                    : 'text-text-muted hover:text-text-secondary hover:bg-bg-base/40'
+                  }
+                  disabled:cursor-not-allowed disabled:opacity-50`}
+              >
+                {seg.icon}
+                {seg.label}
+              </button>
+            ))}
           </div>
+
+          <p className="mt-zp-1 text-zp-xs text-text-muted">{stateDesc[siteState]}</p>
         </>
       ) : (
         <div className="mt-zp-2 rounded-zp-lg border border-dashed border-border-default py-zp-3 text-center text-zp-md text-text-muted">
@@ -296,3 +330,4 @@ function QuickActionsCard({
     </Card>
   );
 }
+

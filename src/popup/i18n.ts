@@ -30,6 +30,9 @@ export const JA: Translations = {
     bypassDesc: '制限ドメインへの単回アップロード例外を申請します。承認は管理コンソール経由です。',
     bypassArmed: '回避有効中 — 1回アップロードで消費',
     bypassRequest: 'ワンタイム回避を申請',
+    bypassDomain: '対象ドメイン',
+    bypassExpiry: (mins: number) => `残り約 ${mins} 分`,
+    bypassRevoke: '取り消す',
     networkFilter: 'Threat Intelligence Filter',
     networkFilterDesc: '脅威インテリジェンスに基づくネットワークフィルタリング',
     quickActions: {
@@ -71,6 +74,7 @@ export const JA: Translations = {
     enableDesc: '画面共有が要求された際に監査ログへ記録します。',
   },
   settings: {
+    themeTitle: 'カラーテーマ',
     langTitle: '表示言語',
     cloudSync: 'クラウド同期設定',
     cloudSyncDesc: 'ボタン1つで ZENPRAX Cloud に安全に接続し、ポリシーと復号鍵を自動同期します。',
@@ -159,6 +163,9 @@ export type Translations = {
     bypassDesc: string;
     bypassArmed: string;
     bypassRequest: string;
+    bypassDomain: string;
+    bypassExpiry: (mins: number) => string;
+    bypassRevoke: string;
     networkFilter: string;
     networkFilterDesc: string;
     quickActions: {
@@ -233,6 +240,7 @@ export type Translations = {
     managedNote: string;
   };
   settings: {
+    themeTitle: string;
     langTitle: string;
     cloudSync: string;
     cloudSyncDesc: string;
@@ -286,6 +294,9 @@ export const EN: Translations = {
       'Request a single-use upload exception for restricted domains. Approval is mediated by the admin console.',
     bypassArmed: 'Bypass Armed — use one upload',
     bypassRequest: 'Request One-Time Bypass',
+    bypassDomain: 'Domain',
+    bypassExpiry: (mins: number) => `~${mins} min remaining`,
+    bypassRevoke: 'Revoke',
     networkFilter: 'Threat Intelligence Filter',
     networkFilterDesc: 'Network filtering based on threat intelligence feeds',
     quickActions: {
@@ -328,6 +339,7 @@ export const EN: Translations = {
     enableDesc: 'Log to the audit trail when a screen share is requested.',
   },
   settings: {
+    themeTitle: 'Color Theme',
     langTitle: 'Display Language',
     cloudSync: 'Cloud Sync Settings',
     cloudSyncDesc:

@@ -11,3 +11,316 @@ body {
 #root {
   width: 420px;
 }
+
+/* ------------------------------------------------------------------ *
+ * Hero header: ambient light + danger/paused states
+ * ------------------------------------------------------------------ */
+.header-wrap {
+  background: linear-gradient(160deg, var(--zp-bg-surface) 0%, var(--zp-bg-base) 65%);
+}
+
+.header-ambient {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse 300px 130px at 50% -30px,
+    var(--zp-status-pulse-safe) 0%, transparent 70%);
+  pointer-events: none;
+  transition: background 0.8s ease;
+  z-index: 0;
+}
+
+.header-paused .header-ambient {
+  background: radial-gradient(ellipse 300px 130px at 50% -30px,
+    var(--zp-status-pulse-warn) 0%, transparent 70%);
+}
+
+.header-alert .header-ambient {
+  background: radial-gradient(ellipse 300px 130px at 50% -30px,
+    var(--zp-status-pulse-crit) 0%, transparent 70%);
+}
+
+/* ------------------------------------------------------------------ *
+ * Expand/collapse button — tab shape, centered between header and body
+ * ------------------------------------------------------------------ */
+.expand-btn-wrap {
+  display: flex;
+  justify-content: center;
+  /* negative margin pulls it flush against the header border */
+  margin-top: -1px;
+}
+
+.expand-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 14px 4px;
+  background: var(--zp-bg-surface);
+  border: 1px solid var(--zp-border-default);
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--zp-brand-primary);
+  cursor: pointer;
+  user-select: none;
+  transition: color 0.15s, background 0.15s;
+  white-space: nowrap;
+}
+
+.expand-btn:hover {
+  color: var(--zp-text-secondary);
+  background: var(--zp-interactive-hover);
+}
+
+.expand-chevron {
+  font-size: 9px;
+  transition: transform 0.25s ease;
+  display: inline-block;
+  transform: rotate(180deg);
+}
+
+.expand-chevron-open {
+  transform: rotate(0deg);
+}
+
+/* ------------------------------------------------------------------ *
+ * Tab navigation: icon-fixed + underline style + label expand
+ * ------------------------------------------------------------------ */
+.tab-btn {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0;
+  height: 40px;
+  min-width: 40px;
+  overflow: hidden;
+  white-space: nowrap;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--zp-brand-primary);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+  position: relative;
+}
+
+.tab-btn:not(.tab-active):hover {
+  color: var(--zp-brand-hover);
+}
+
+.tab-btn:not(.tab-active):hover::after {
+  content: attr(data-tip);
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--zp-border-default);
+  color: var(--zp-surface-chrome-text);
+  font-size: 11px;
+  font-weight: 500;
+  padding: 4px 8px;
+  border-radius: 6px;
+  white-space: nowrap;
+  border: 1px solid var(--zp-border-default);
+  pointer-events: none;
+  z-index: 50;
+  box-shadow: var(--zp-shadow-lg, 0 4px 12px rgba(0,0,0,0.5));
+}
+
+.tab-btn.tab-active {
+  color: var(--zp-brand-hover);
+  border-bottom-color: var(--zp-brand-hover);
+}
+
+.tab-label {
+  display: inline-block;
+  width: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition:
+    width 0.28s cubic-bezier(0.4,0,0.2,1),
+    opacity 0.2s ease,
+    margin-left 0.28s cubic-bezier(0.4,0,0.2,1);
+  margin-left: 0;
+}
+
+.tab-btn.tab-active .tab-label {
+  width: 72px;
+  opacity: 1;
+  margin-left: 5px;
+}
+
+/* ------------------------------------------------------------------ *
+ * Shield pulse animation (Phase 2-A)
+ * ------------------------------------------------------------------ */
+@keyframes shield-pulse {
+  0% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.55); opacity: 0; }
+  100% { transform: scale(1.55); opacity: 0; }
+}
+
+@keyframes shield-pulse-2 {
+  0% { transform: scale(1); opacity: 0.35; }
+  70% { transform: scale(1.85); opacity: 0; }
+  100% { transform: scale(1.85); opacity: 0; }
+}
+
+.shield-ring-1 {
+  animation: shield-pulse 2s ease-out infinite;
+}
+
+.shield-ring-2 {
+  animation: shield-pulse-2 2s ease-out 0.5s infinite;
+}
+
+.shield-paused .shield-ring-1,
+.shield-paused .shield-ring-2 {
+  animation-play-state: paused;
+  opacity: 0;
+}
+
+/* ------------------------------------------------------------------ *
+ * Blocked-count fly-up animation (Phase 2-D)
+ * ------------------------------------------------------------------ */
+@keyframes flyup {
+  0%   { opacity: 1; transform: translateY(0); }
+  80%  { opacity: 0.7; transform: translateY(-18px); }
+  100% { opacity: 0; transform: translateY(-24px); }
+}
+
+.flyup-chip {
+  animation: flyup 0.9s ease-out forwards;
+  pointer-events: none;
+  position: absolute;
+}
+
+/* ------------------------------------------------------------------ *
+ * Live dot blink (Phase 2-B feed bar)
+ * ------------------------------------------------------------------ */
+@keyframes live-blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.2; }
+}
+
+.live-dot {
+  animation: live-blink 1.4s ease-in-out infinite;
+}
+
+/* ------------------------------------------------------------------ *
+ * Hero collapse transition (Phase 2-C)
+ * ------------------------------------------------------------------ */
+.hero-body {
+  transition: opacity 0.22s ease;
+}
+
+.hero-body-open {
+  opacity: 1;
+}
+
+.hero-body-closed {
+  display: none;
+  opacity: 0;
+}
+
+/* ------------------------------------------------------------------ *
+ * Ambient danger flash (header-alert overrides ambient light)
+ * ------------------------------------------------------------------ */
+.header-alert {
+  /* ambient light handles the color via .header-alert .header-ambient */
+}
+
+/* ------------------------------------------------------------------ *
+ * Feed bar tag colors
+ * ------------------------------------------------------------------ */
+.feed-bar-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.feed-tag-paste   { background: var(--zp-severity-critical-bg);  color: var(--zp-severity-critical-text); }
+.feed-tag-sso     { background: var(--zp-status-info-bg);         color: var(--zp-status-info-text); }
+.feed-tag-bypass  { background: var(--zp-status-warn-bg);         color: var(--zp-status-warn-text); }
+.feed-tag-dl      { background: color-mix(in srgb, var(--zp-brand-primary) 14%, transparent); color: var(--zp-brand-hover); }
+.feed-tag-default { background: var(--zp-interactive-hover);      color: var(--zp-brand-primary); }
+
+/* ------------------------------------------------------------------ *
+ * Keyboard hint bar
+ * ------------------------------------------------------------------ */
+.kb-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 6px 14px 8px;
+  background: color-mix(in srgb, var(--zp-bg-surface) 50%, transparent);
+  border-top: 1px solid color-mix(in srgb, var(--zp-border-default) 50%, transparent);
+  flex-wrap: wrap;
+}
+
+.kb-hint-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--zp-brand-primary);
+}
+
+.kb-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 16px;
+  border-radius: 3px;
+  border: 1px solid color-mix(in srgb, var(--zp-brand-primary) 30%, transparent);
+  background: color-mix(in srgb, var(--zp-brand-primary) 8%, transparent);
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--zp-brand-primary);
+  font-family: ui-monospace, monospace;
+  line-height: 1;
+}
+
+/* ------------------------------------------------------------------ *
+ * prefers-reduced-motion
+ * ------------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  .tab-label {
+    transition: none;
+  }
+
+  .expand-chevron {
+    transition: none;
+  }
+
+  .header-ambient {
+    transition: none;
+  }
+
+  .shield-ring-1,
+  .shield-ring-2 {
+    animation: none;
+    opacity: 0;
+  }
+
+  .flyup-chip {
+    animation: none;
+    display: none;
+  }
+
+  .live-dot {
+    animation: none;
+  }
+
+  .hero-body {
+    transition: none;
+  }
+}

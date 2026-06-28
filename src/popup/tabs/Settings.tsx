@@ -9,6 +9,8 @@ import {
   Lock,
   CheckCircle2,
   SlidersHorizontal,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import type { KibaMode, KibaSettings, TenantWhitelistEntry } from '../../types';
 import type { TenantProvider } from '../../types';
@@ -27,6 +29,31 @@ export function Settings({ settings, isManaged, onUpdateSettings }: SettingsProp
 
   return (
     <div className="space-y-zp-3">
+      {/* Theme selection */}
+      <Card>
+        <div className="flex items-center gap-zp-2">
+          {settings.theme === 'dark'
+            ? <Moon className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden />
+            : <Sun className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden />}
+          <div className="text-zp-base font-semibold">{t.settings.themeTitle}</div>
+        </div>
+        <div className="mt-zp-2 flex gap-zp-2">
+          {(['dark', 'light'] as const).map((th) => (
+            <button
+              key={th}
+              onClick={() => void onUpdateSettings({ theme: th })}
+              className={`rounded-zp-lg px-zp-4 py-zp-1 text-zp-md font-semibold transition ${
+                settings.theme === th
+                  ? 'bg-brand-hover text-text-on-brand'
+                  : 'bg-bg-base/60 text-text-muted hover:text-text-secondary'
+              }`}
+            >
+              {th === 'dark' ? 'ダーク' : 'ライト'}
+            </button>
+          ))}
+        </div>
+      </Card>
+
       {/* Language selection */}
       <Card>
         <div className="flex items-center gap-zp-2">

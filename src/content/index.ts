@@ -82,6 +82,7 @@ function reconcile(s: KibaSettings | null): void {
   // Global kill-switch: enabled=false stops all plugins immediately.
   if (s?.enabled === false) {
     stop('pasteGuard');
+    stop('fileGater');
     stop('ssoFiller');
     stop('screenShare');
     return;

@@ -78,7 +78,7 @@ export function notify(title: string, message: string): void {
 
 /** 現在マウント中のホスト要素・React ルート・Shadow Root の組。 */
 interface MountedOverlay {
-  host: HTMLDialogElement;
+  host: HTMLElement;
   shadow: ShadowRoot;
   root: Root;
 }
@@ -89,11 +89,6 @@ let active: MountedOverlay | null = null;
 export function removeOverlay(): void {
   if (!active) return;
   active.root.unmount();
-  try {
-    active.host.close();
-  } catch {
-    // already closed
-  }
   active.host.remove();
   active = null;
 }
@@ -108,19 +103,12 @@ export function removeOverlay(): void {
 function render(node: ReactNode): void {
   removeOverlay();
 
-  const host = document.createElement('dialog');
-  // <dialog> 自体の UA スタイル（border / padding / background / 最大幅制約）をリセットし、
-  // レイアウトは Shadow Root 内の OVERLAY_CSS に完全に委ねる。
-  const dialogReset = `
-    dialog { all: unset; display: block; }
-    dialog::backdrop { display: none; }
-  `;
+  const host = document.createElement('div');
+  // ホスト要素はレイアウトに影響しないオーバーレイ専用コンテナ。
+  // all:initial でホストページの継承スタイルをリセットし、固定位置・最大 z-index で最前面を確保する。
+  host.style.cssText = 'all:initial;position:fixed;inset:0;z-index:2147483647';
 
   const shadow = host.attachShadow({ mode: 'open' });
-
-  const resetEl = document.createElement('style');
-  resetEl.textContent = dialogReset;
-  shadow.appendChild(resetEl);
 
   // デザイントークンを :host 上の CSS 変数として定義し、OVERLAY_CSS から参照する。
   const varsEl = document.createElement('style');
@@ -140,7 +128,6 @@ function render(node: ReactNode): void {
 
   const attach = (): void => {
     (document.body ?? document.documentElement).appendChild(host);
-    host.showModal();
   };
 
   if (document.body) {
