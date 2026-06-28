@@ -7,3 +7,5 @@ export { TenantList } from './TenantList';
 export { ShieldWrap } from './ShieldWrap';
 export { FeedBar } from './FeedBar';
 export { SiteSegmentCard } from './SiteSegmentCard';
+export { FeatureToggleCard } from './FeatureToggleCard';
+export type { FeatureToggleCardProps } from './FeatureToggleCard';

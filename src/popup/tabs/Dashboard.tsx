@@ -12,7 +12,7 @@ import {
   ChevronUp,
 } from 'lucide-react';
 import type { KibaSettings, TabId } from '../../types';
-import { Card, StatCard, Toggle, TenantList, SiteSegmentCard } from '../components';
+import { Card, StatCard, TenantList, SiteSegmentCard, FeatureToggleCard } from '../components';
 import { useLang } from '../i18n';
 
 /**
@@ -74,59 +74,35 @@ export function Dashboard({
       />
 
       {/* Primary features (always visible) */}
-      <Card>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-zp-2">
-            <MousePointerClick className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden />
-            <div>
-              <div className="text-zp-base font-semibold">{t.dashboard.antiClickFix}</div>
-              <div className="text-zp-md text-text-muted">{t.dashboard.antiClickFixDesc}</div>
-            </div>
-          </div>
-          <Toggle
-            checked={settings.antiClickFixEnabled}
-            disabled={locked}
-            onChange={onToggleAntiClickFix}
-            label="Anti-ClickFix"
-          />
-        </div>
-      </Card>
+      <FeatureToggleCard
+        icon={MousePointerClick}
+        title={t.dashboard.antiClickFix}
+        description={t.dashboard.antiClickFixDesc}
+        checked={settings.antiClickFixEnabled}
+        disabled={locked}
+        onChange={onToggleAntiClickFix}
+        label="Anti-ClickFix"
+      />
 
-      <Card>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-zp-2">
-            <EyeOff className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden />
-            <div>
-              <div className="text-zp-base font-semibold">{t.dashboard.masking}</div>
-              <div className="text-zp-md text-text-muted">{t.dashboard.maskingDesc}</div>
-            </div>
-          </div>
-          <Toggle
-            checked={settings.maskEnabled}
-            disabled={locked}
-            onChange={onToggleMask}
-            label="Confidential Masking"
-          />
-        </div>
-      </Card>
+      <FeatureToggleCard
+        icon={EyeOff}
+        title={t.dashboard.masking}
+        description={t.dashboard.maskingDesc}
+        checked={settings.maskEnabled}
+        disabled={locked}
+        onChange={onToggleMask}
+        label="Confidential Masking"
+      />
 
-      <Card>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-zp-2">
-            <ShieldAlert className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden />
-            <div>
-              <div className="text-zp-base font-semibold">{t.dashboard.networkFilter}</div>
-              <div className="text-zp-md text-text-muted">{t.dashboard.networkFilterDesc}</div>
-            </div>
-          </div>
-          <Toggle
-            checked={settings.networkFilterEnabled}
-            disabled={locked}
-            onChange={onToggleNetworkFilter}
-            label="Threat Intelligence Filter"
-          />
-        </div>
-      </Card>
+      <FeatureToggleCard
+        icon={ShieldAlert}
+        title={t.dashboard.networkFilter}
+        description={t.dashboard.networkFilterDesc}
+        checked={settings.networkFilterEnabled}
+        disabled={locked}
+        onChange={onToggleNetworkFilter}
+        label="Threat Intelligence Filter"
+      />
 
       {/* Secondary features (collapsible) */}
       <button
@@ -143,59 +119,35 @@ export function Dashboard({
 
       {secondaryOpen && (
         <div className="space-y-zp-3">
-          <Card>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-zp-2">
-                <KeyRound className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden />
-                <div>
-                  <div className="text-zp-base font-semibold">{t.dashboard.sso}</div>
-                  <div className="text-zp-md text-text-muted">{t.dashboard.ssoDesc}</div>
-                </div>
-              </div>
-              <Toggle
-                checked={settings.ssoEnabled}
-                disabled={locked}
-                onChange={onToggleSso}
-                label="Pseudo-SSO Autofill"
-              />
-            </div>
-          </Card>
+          <FeatureToggleCard
+            icon={KeyRound}
+            title={t.dashboard.sso}
+            description={t.dashboard.ssoDesc}
+            checked={settings.ssoEnabled}
+            disabled={locked}
+            onChange={onToggleSso}
+            label="Pseudo-SSO Autofill"
+          />
 
-          <Card>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-zp-2">
-                <Download className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden />
-                <div>
-                  <div className="text-zp-base font-semibold">{t.download.enable}</div>
-                  <div className="text-zp-md text-text-muted">{t.download.enableDesc}</div>
-                </div>
-              </div>
-              <Toggle
-                checked={settings.downloadGaterEnabled}
-                disabled={locked}
-                onChange={onToggleDownloadGater}
-                label="Download Gater"
-              />
-            </div>
-          </Card>
+          <FeatureToggleCard
+            icon={Download}
+            title={t.download.enable}
+            description={t.download.enableDesc}
+            checked={settings.downloadGaterEnabled}
+            disabled={locked}
+            onChange={onToggleDownloadGater}
+            label="Download Gater"
+          />
 
-          <Card>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-zp-2">
-                <MonitorPlay className="h-4 w-4 shrink-0 text-brand-primary" aria-hidden />
-                <div>
-                  <div className="text-zp-base font-semibold">{t.screenShare.enable}</div>
-                  <div className="text-zp-md text-text-muted">{t.screenShare.enableDesc}</div>
-                </div>
-              </div>
-              <Toggle
-                checked={settings.screenShareAuditEnabled}
-                disabled={locked}
-                onChange={onToggleScreenShareAudit}
-                label="Screen Share Audit"
-              />
-            </div>
-          </Card>
+          <FeatureToggleCard
+            icon={MonitorPlay}
+            title={t.screenShare.enable}
+            description={t.screenShare.enableDesc}
+            checked={settings.screenShareAuditEnabled}
+            disabled={locked}
+            onChange={onToggleScreenShareAudit}
+            label="Screen Share Audit"
+          />
         </div>
       )}
 
