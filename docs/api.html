@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Kiba Policy Delivery API Specification</title>
+    <!-- Swagger UI 公式のCSSを信頼性の高いCDNから取得 -->
+    <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
+    <style>
+        html {
+            box-sizing: border-box;
+            overflow-y: scroll;
+        }
+
+        *,
+        *:before,
+        *:after {
+            box-sizing: inherit;
+        }
+
+        body {
+            margin: 0;
+            background: #02120c;
+            /* ZenpraxブランドのSlate-950に近いディープダークトーン */
+            font-family: Inter, system-ui, -apple-system, sans-serif;
+        }
+
+        /* Swagger UIのテーマをダークサイバーパンク/エメラルドに寄せる微調整 */
+        .swagger-ui {
+            filter: invert(88%) hue-rotate(150deg);
+            /* 簡易的なダークモード変換ハック */
+        }
+
+        .swagger-ui .topbar {
+            display: none;
+            /* 上部のロゴバーを非表示にしてクリーンに */
+        }
+
+        .swagger-ui .info .title {
+            color: #04231a !important;
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Swagger UIをレンダリングするマウントポイント -->
+    <div id="swagger-ui"></div>
+
+    <!-- Swagger UIの主要なJavaScriptライブラリをCDNからロード -->
+    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-standalone-preset.js"></script>
+    <script>
+      window.onload = () => {
+        // 同じディレクトリ内にある openapi.yaml を自動パースして画面にバインド
+        window.ui = SwaggerUIBundle({
+          url: './openapi.yaml',
+          dom_id: '#swagger-ui',
+          deepLinking: true,
+          presets: [
+            SwaggerUIBundle.presets.apis,
+            SwaggerUIStandalonePreset
+          ],
+          plugins: [
+            SwaggerUIBundle.plugins.DownloadUrl
+          ],
+          layout: "BaseLayout"
+        });
+      };
+    </script>
+</body>
+
+</html>
