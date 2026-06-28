@@ -20,21 +20,21 @@ export type KibaMode = 'ENFORCE' | 'DRY_RUN';
 export type OfflineStrategy = 'LOCKDOWN' | 'FAIL_OPEN';
 
 /**
- * One-Time Bypass の付与レコード。承認エンジン（コンソール、または未設定時の
- * ローカル即時承認）が発行する。状態遷移:
- *   null ─(承認)→ {remainingUses:1} ─(消費)→ null
- *   expiresAt < now でアクセスした場合は失効として null 扱い
+ * One-Time Bypass grant record issued by the approval engine (console or
+ * local instant-approval if unconfigured). State transitions:
+ *   null ─(approval)→ {remainingUses:1} ─(consumed)→ null
+ *   If expiresAt < now, treat as expired (null).
  */
 export interface BypassGrant {
-  /** 承認 ID（コンソール承認時はサーバ発番、ローカル承認時は UUID）。 */
+  /** Approval ID (server-issued for console approval, UUID for local approval). */
   id: string;
-  /** この付与が有効なホスト名。 */
+  /** Hostname where this grant is valid. */
   domain: string;
-  /** 発行時刻（epoch ms）。 */
+  /** Time issued (epoch ms). */
   grantedAt: number;
-  /** 失効時刻（epoch ms）。TTL。 */
+  /** Expiry time (epoch ms). TTL. */
   expiresAt: number;
-  /** 残り使用回数（単回付与なら 1）。消費でデクリメント。 */
+  /** Remaining uses (1 for single-use grant). Decremented on consumption. */
   remainingUses: number;
 }
 
@@ -49,9 +49,10 @@ export interface KibaAuthState {
   /** Behaviour once offline and the TTL has expired. */
   offlineStrategy: OfflineStrategy;
   /**
-   * SSO/OIDC（SAML/OIDC IdP）で取得した ID トークン（JWT）。属性ベース仕分けの
-   * claims（email / groups）の供給源。未認証時は null。
-   * 署名検証は IdP 側／別レイヤーの責務で、ここでは仕分け用に payload のみ参照する。
+   * ID token (JWT) obtained via SSO/OIDC (SAML/OIDC IdP). Source of claims
+   * (email / groups) for attribute-based routing. Null when unauthenticated.
+   * Signature verification is the IdP's / another layer's responsibility;
+   * here we only read the payload for routing.
    */
   idToken: string | null;
 }

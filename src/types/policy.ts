@@ -10,60 +10,60 @@ import type { KibaAuthState } from './auth';
 import type { KibaSettings } from './settings';
 
 /**
- * JWT（ID トークン）の claims から、ポリシー仕分けに用いる最小サブセット。
- * IdP により claim 名は揺れるため、email / groups 以外も保持できるよう
- * インデックスシグネチャを持たせる（値は unknown で any は使わない）。
+ * Minimal subset of JWT (ID-token) claims used for policy routing.
+ * Claim names vary by IdP, so an index signature preserves unknown claims
+ * (typed as unknown, not any).
  */
 export interface PolicyClaims {
-  /** ユーザーのメールアドレス（仕分けの主キー）。 */
+  /** User's email address (primary routing key). */
   email?: string;
-  /** ユーザーの所属グループ（SAML/OIDC の groups claim）。 */
+  /** Groups the user belongs to (SAML/OIDC groups claim). */
   groups?: string[];
-  /** その他の claim（未使用だが保持はする）。 */
+  /** Any other claims — retained but not used for routing. */
   [claim: string]: unknown;
 }
 
 /**
- * 設定パッチ。KibaSettings の浅い部分集合だが、auth だけは部分更新を許すため
- * Partial<KibaAuthState> として表現する（呼び出し側で既存 auth と合成する）。
- * policySchema.PolicyPatch / policyFilter.compileActiveSettings の共通土台。
+ * Settings patch: a shallow subset of KibaSettings where `auth` allows
+ * partial updates (callers merge it with the existing auth state).
+ * Shared base for policySchema.PolicyPatch and policyFilter.compileActiveSettings.
  */
 export type KibaSettingsPatch = Partial<Omit<KibaSettings, 'auth'>> & {
   auth?: Partial<KibaAuthState>;
 };
 
 /**
- * 設定をどのユーザーへ配るかのターゲット条件。emails と groups は OR で評価し、
- * いずれか 1 つでも一致すれば対象とみなす。両方未指定（空ターゲット）は「全員」。
+ * Targeting condition that decides which users receive a settings patch.
+ * emails and groups are evaluated with OR logic; a single match is sufficient.
+ * When both are omitted (empty target) the patch applies to everyone.
  */
 export interface PolicyTarget {
-  /** 対象メールアドレスの完全一致リスト（小文字で比較）。 */
+  /** Exact-match email list (compared case-insensitively). */
   emails?: string[];
-  /** 対象グループ。claims.groups にいずれか 1 つでも含まれれば一致。 */
+  /** Group list — matches if the user's claims.groups contains any entry. */
   groups?: string[];
 }
 
-/** ターゲット付きの設定断片。target にマッチしたユーザーにのみ value を適用する。 */
+/** A settings patch paired with a targeting condition. Applied only to matching users. */
 export interface TargetedItem<T> {
-  /** 適用条件。 */
+  /** The condition that must be satisfied for this item to apply. */
   target: PolicyTarget;
-  /** マッチしたときに適用する値。 */
+  /** The value to apply when the target matches. */
   value: T;
 }
 
 /**
- * 組織から配信される暗号化マスターポリシー（復号後の平文 JSON 形）。
- * base を全員に適用し、overrides を属性ベースで上書きしてユーザー個別の
- * 実効設定（KibaSettings の部分集合）をコンパイルする。
+ * Decrypted form of the encrypted master policy distributed by the organisation.
+ * `base` is applied to everyone; `overrides` are evaluated in array order and
+ * merged last-wins (later entries take precedence).
  */
 export interface KibaMasterPolicy {
-  /** スキーマ版（前方互換のための番号）。 */
+  /** Schema version number for forward-compatibility checks. */
   version: number;
-  /** 全員に適用される基底設定（属性に依らない）。 */
+  /** Baseline settings applied to all users regardless of attributes. */
   base: KibaSettingsPatch;
   /**
-   * 属性ベースの上書き。配列順に評価し、マッチしたものを後勝ちでマージする
-   * （配列後方の項目が優先）。
+   * Attribute-based overrides evaluated in order; later entries win on conflict.
    */
   overrides?: TargetedItem<KibaSettingsPatch>[];
 }

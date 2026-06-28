@@ -15,8 +15,8 @@ export interface KibaSettings {
   /** When true, the content script inspects and blocks dangerous pastes. */
   antiClickFixEnabled: boolean;
   /**
-   * One-Time Bypass の付与状態。承認エンジン経由で発行される TTL 付きレコード。
-   * null のとき有効な例外なし。
+   * One-Time Bypass grant state. TTL-bearing record issued via the approval
+   * engine. Null when no active exception.
    */
   oneTimeBypass: BypassGrant | null;
   /**
@@ -34,8 +34,9 @@ export interface KibaSettings {
   /** When true, the background worker periodically audits installed extensions. */
   auditExtensionsEnabled: boolean;
   /**
-   * 組織のマスターポリシー配下にあるとき true。Popup を読み取り専用にロックダウン
-   * するための実効フラグ（compileActiveSettings が立てる）。個人利用時は false。
+   * True when under an organization's master policy. Effective flag to
+   * lock down the Popup to read-only (set by compileActiveSettings).
+   * False for personal use.
    */
   isManaged: boolean;
   /** TTL-backed auth/standalone state (used by the background authHandler). */
@@ -73,37 +74,41 @@ export interface KibaSettings {
    */
   hiddenTabs: TabId[];
   /**
-   * 機能ごとの enforcement モード上書き（機能単位 DRY_RUN）。
-   * 未指定（または該当機能のキーが無い）場合はグローバルな `mode` にフォールバックする。
-   * 例: ファイルは ENFORCE のままペースト検知だけ DRY_RUN にしたい運用に対応。
+   * Per-feature enforcement mode overrides (feature-level DRY_RUN).
+   * When unspecified (or key missing for a feature), falls back to global `mode`.
+   * Example: keep file in ENFORCE while only paste detection in DRY_RUN.
    */
   featureModes?: Partial<Record<'paste' | 'file' | 'tenant' | 'download', KibaMode>>;
   /**
-   * OTA 配信される追加パターン（ClickFix 検知・機密マスク）。RegExp は文字列で配信し、
-   * 適用前に必ず検証してから実体化する（信頼しない）。未設定なら組み込みパターンのみ。
+   * OTA-distributed additional patterns (ClickFix detection & secret masking).
+   * RegExp shipped as strings, always validated before materialization (untrusted).
+   * When unset, only built-in patterns apply.
    */
   customPatterns?: {
-    /** 危険コマンド検知に追加する RegExp ソース文字列の配列。 */
+    /** Array of RegExp source strings to add to dangerous command detection. */
     danger?: string[];
-    /** 機密マスクに追加するラベル付き RegExp ソース。 */
+    /** Labeled RegExp sources to add to secret masking. */
     secrets?: { label: string; pattern: string }[];
   };
   /**
-   * OTA 配信されるテナント抽出ルール。未設定なら組み込みの Slack/Google/GitHub 判定のみ。
+   * OTA-distributed tenant extraction rules. When unset, only built-in
+   * Slack/Google/GitHub detection applies.
    */
   tenantRules?: TenantRuleDef[];
   /**
-   * Download Gater を有効化するか。未承認ドメインからのダウンロードを一時停止して
-   * 承認フローに乗せる。default false（'downloads' 権限の追加と整合）。
+   * Enable Download Gater. Suspends downloads from unapproved domains and
+   * routes them through the approval flow. Default false (consistent with
+   * 'downloads' permission scope).
    */
   downloadGaterEnabled: boolean;
   /**
-   * Download Gater でダウンロードを無条件許可するホスト名のリスト（scheme/path なし）。
+   * List of hostnames where Download Gater unconditionally permits downloads
+   * (no scheme or path).
    */
   downloadAllowlist: string[];
   /**
-   * 画面共有（getDisplayMedia）の監査を有効化するか。best-effort の記録のみで
-   * 共有自体はブロックしない。default false。
+   * Enable screen-sharing (getDisplayMedia) audit. Best-effort logging only;
+   * does not block sharing itself. Default false.
    */
   screenShareAuditEnabled: boolean;
   /** UI color theme. Defaults to 'dark'. */
@@ -136,8 +141,8 @@ export const DEFAULT_SETTINGS: KibaSettings = {
   userBlockDomains: [],
   filterAllowlist: [],
   hiddenTabs: [],
-  // 機能単位 DRY_RUN / OTA パターン / テナントルールは未設定なら組み込み挙動に
-  // フォールバックするため default では省略する（optional フィールド）。
+  // Per-feature DRY_RUN / OTA patterns / tenant rules are omitted from defaults
+  // (optional fields) because they fall back to built-in behavior when unset.
   downloadGaterEnabled: false,
   downloadAllowlist: [],
   screenShareAuditEnabled: false,

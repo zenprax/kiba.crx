@@ -3,19 +3,19 @@
  */
 
 /**
- * 共有アカウントの資格情報（擬似 SSO autofill 用）。
+ * Shared account credentials for pseudo-SSO autofill.
  *
- * セキュリティ要件: 実資格情報は **平文で永続化しない**。コンソールから取得し、
- * background のメモリ常駐キャッシュ（src/background/credentialBroker.ts）にのみ
- * 保持する。この型は chrome.storage には保存されず、broker と content 間の
- * メモリ上の受け渡しにのみ用いる。
+ * Security requirement: actual credentials are **never persisted in plaintext**.
+ * Fetched from console and kept only in the background's in-memory cache
+ * (src/background/credentialBroker.ts). This type is never stored to
+ * chrome.storage; used only for in-memory handoff between broker and content.
  */
 export interface SsoCredential {
   /** Substring matched against the page URL, e.g. "github.com/login". */
   urlMatch: string;
   /** Account username/email to inject. */
   username: string;
-  /** Account password to inject. メモリ常駐のみ・storage 非永続。 */
+  /** Account password to inject. In-memory only; not persisted to storage. */
   password: string;
   /** When true, the form is submitted immediately after filling. */
   autoSubmit: boolean;

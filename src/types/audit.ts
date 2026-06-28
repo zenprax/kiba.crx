@@ -14,9 +14,9 @@ export type AuditEventType =
   | 'sso-fill'
   | 'tenant-block'
   | 'extension-audit'
-  // 未承認ドメインからのダウンロードを一時停止/ブロックした（Download Gater）。
+  // Suspended or blocked download from an unapproved domain (Download Gater).
   | 'download-block'
-  // 画面共有（getDisplayMedia）の要求を監査記録した（best-effort、ブロックはしない）。
+  // Audited screen-sharing request (getDisplayMedia) (best-effort, non-blocking).
   | 'screen-share';
 
 /** A single local audit-log entry shown in the popup dashboard. */

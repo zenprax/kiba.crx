@@ -3,7 +3,7 @@
  *
  * Rather than blocking whole domains, kiba.crx identifies *which tenant/account*
  * within a SaaS the user is currently in, and gates data egress (upload/paste)
- * when that tenant is not on the in-house ("自社公式") whitelist.
+ * when that tenant is not on the in-house (official company) whitelist.
  *
  * This module is intentionally free of DOM/Chrome dependencies (it only parses
  * a URL string) so it can be unit-tested in isolation (see tenantDetector.test.ts).
